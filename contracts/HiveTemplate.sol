@@ -8,6 +8,10 @@ contract HiveTemplate is BaseTemplate {
     string constant private ERROR_MISSING_TOKEN_CACHE = "TEMPLATE_MISSING_TOKEN_CACHE";
     string constant private ERROR_MINIME_FACTORY_NOT_PROVIDED = "TEMPLATE_MINIME_FAC_NOT_PROVIDED";
 
+    string constant private ERROR_EMPTY_HOLDERS = "COMPANY_EMPTY_HOLDERS";
+    string constant private ERROR_BAD_HOLDERS_STAKES_LEN = "COMPANY_BAD_HOLDERS_STAKES_LEN";
+    string constant private ERROR_BAD_VOTE_SETTINGS = "COMPANY_BAD_VOTE_SETTINGS";
+
     struct TokenCache {
         address owner;
         MiniMeToken mbrToken;
@@ -45,6 +49,32 @@ contract HiveTemplate is BaseTemplate {
         return (mbrToken, mrtToken);
     }
 
+    /**
+    * @dev Deploy a 1Hive DAO using previously cached MiniMe tokens
+    * @param _id String with the name for org, will assign `[id].aragonid.eth`
+    * @param _holders Array of token holder addresses
+    * @param _stakes Array of merit token stakes for holders (token has 18 decimals, multiply token amount `* 10^18`)
+    * @param _votingSettings Array of [supportRequired, minAcceptanceQuorum, voteDuration] to set up the voting app of the organization
+
+    */
+    function newInstance(
+        string memory _id,
+        address[] memory _holders,
+        uint256[] memory _stakes,
+        uint64[3] memory _mbrVotingSettings,
+        uint64[3] memory _mrtVotingSettings
+    )
+        public
+    {
+        _ensureDAOSettings(_holders, _stakes, _mbrVotingSettings, _mrtVotingSettings);
+
+        (Kernel dao, ACL acl) = _createDAO();
+
+        (Voting mbrVoting, Voting mrtVoting) = _setupApps(dao, acl, _holders, _stakes, _mbrVotingSettings, _mrtVotingSettings);
+        _transferRootPermissionsFromTemplateAndFinalizeDAO(dao, mbrVoting);
+        _registerID(_id, dao);
+    }
+
     // --------------------------- Internal Functions ---------------------------
     function _cacheTokens(MiniMeToken _mbrToken, MiniMeToken _mrtToken, address _owner) internal {
         tokenCache = TokenCache(_owner, _mbrToken, _mrtToken);
@@ -77,5 +107,65 @@ contract HiveTemplate is BaseTemplate {
         MiniMeToken token = miniMeFactory.createCloneToken(MiniMeToken(address(0)), 0, _name, 0, _symbol, false);
         emit DeployToken(address(token));
         return token;
+    }
+
+    function _setupApps(
+        Kernel _dao,
+        ACL _acl,
+        address[] memory _holders,
+        uint256[] memory _stakes,
+        uint64[3] memory _mbrVotingSettings,
+        uint64[3] memory _mrtVotingSettings
+    )
+        internal
+        returns (Voting, Voting)
+    {
+        (MiniMeToken mbrToken, MiniMeToken mrtToken) = _popTokenCache(msg.sender);
+        Vault vault = _installVaultApp(_dao);
+
+        TokenManager mbrTokenManager = _installTokenManagerApp(_dao, mbrToken, false, uint256(1));
+        TokenManager mrtTokenManager = _installTokenManagerApp(_dao, mrtToken, true, uint256(0));
+
+        Voting mbrVoting = _installVotingApp(_dao, mbrToken, _mbrVotingSettings);
+        Voting mrtVoting = _installVotingApp(_dao, mrtToken, _mrtVotingSettings);
+
+        _mintTokens(_acl, mbrTokenManager, _holders, _stakes);
+        _mintTokens(_acl, mrtTokenManager, _holders, _stakes);
+        
+        _setupPermissions(_acl, vault, mbrVoting, mrtVoting, mbrTokenManager, mrtTokenManager);
+
+        return (mbrVoting, mrtVoting);
+    }
+
+    function _setupPermissions(
+        ACL _acl,
+        Vault _vault,
+        Voting _mbrVoting,
+        Voting _mrtVoting,
+        TokenManager _mbrTokenManager,
+        TokenManager _mrtTokenManager
+    )
+        internal
+    {
+
+        _createVaultPermissions(_acl, _vault, _mbrVoting, _mbrVoting);
+        _createVotingPermissions(_acl, _mbrVoting, _mbrVoting, _mbrTokenManager, _mbrVoting);
+        _createVotingPermissions(_acl, _mrtVoting, _mrtVoting, _mrtTokenManager, _mbrVoting);
+        _createEvmScriptsRegistryPermissions(_acl, _mbrVoting, _mbrVoting);
+        _createTokenManagerPermissions(_acl, _mbrTokenManager, _mbrVoting, _mbrVoting);
+        _createTokenManagerPermissions(_acl, _mrtTokenManager, _mrtVoting, _mbrVoting);
+    }
+
+    function _ensureDAOSettings(
+        address[] memory _holders,
+        uint256[] memory _stakes,
+        uint64[3] memory _mbrVotingSettings,
+        uint64[3] memory _mrtVotingSettings
+    ) private pure
+    {
+        require(_holders.length > 0, ERROR_EMPTY_HOLDERS);
+        require(_holders.length == _stakes.length, ERROR_BAD_HOLDERS_STAKES_LEN);
+        require(_mbrVotingSettings.length == 3, ERROR_BAD_VOTE_SETTINGS);
+        require(_mrtVotingSettings.length == 3, ERROR_BAD_VOTE_SETTINGS);
     }
 }
