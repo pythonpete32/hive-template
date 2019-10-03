@@ -2,6 +2,8 @@ pragma solidity 0.4.24;
 
 import "@aragon/apps-shared-minime/contracts/MiniMeToken.sol";
 import "@aragon/templates-shared/contracts/BaseTemplate.sol";
+import "./tps/AddressBook.sol";
+import { DotVoting } from "./tps/DotVoting.sol";
 
 
 contract HiveTemplate is BaseTemplate {
@@ -19,7 +21,7 @@ contract HiveTemplate is BaseTemplate {
         MiniMeToken mbrToken;
         MiniMeToken mrtToken;
     }
-    
+
     TokenCache tokenCache;
 
     constructor(DAOFactory _daoFactory, ENS _ens, MiniMeTokenFactory _miniMeFactory, IFIFSResolvingRegistrar _aragonID)
@@ -30,6 +32,9 @@ contract HiveTemplate is BaseTemplate {
         _ensureMiniMeFactoryIsValid(_miniMeFactory);
     }
 
+    /**
+    * @dev cretaes a new 1Hive DAO with no args for testing
+     */
     function newTokensAndInstance() external {
         uint64[3] memory voteSettings = [uint64(50 ** 16), uint64(50 ** 16), uint64(259200)];
         address[] memory holders;
@@ -112,6 +117,7 @@ contract HiveTemplate is BaseTemplate {
     * @param _mbrVotingSettings Array of [supportRequired, minAcceptanceQuorum, voteDuration] to set up the voting app of the organization
     * @param _mrtVotingSettings Array of [supportRequired, minAcceptanceQuorum, voteDuration] to set up the voting app of the organization
     */
+
     function newInstance(
         string memory _id,
         address[] memory _holders,
@@ -129,8 +135,6 @@ contract HiveTemplate is BaseTemplate {
         _transferRootPermissionsFromTemplateAndFinalizeDAO(dao, mbrVoting);
         _registerID(_id, dao);
     }
-
-
 
     // --------------------------- Internal Functions ---------------------------
     function _cacheTokens(MiniMeToken _mbrToken, MiniMeToken _mrtToken, address _owner) internal {
@@ -188,10 +192,32 @@ contract HiveTemplate is BaseTemplate {
 
         _mintTokens(_acl, mbrTokenManager, _holders, _stakes);
         _mintTokens(_acl, mrtTokenManager, _holders, _stakes);
-        
+
         _setupPermissions(_acl, vault, mbrVoting, mrtVoting, mbrTokenManager, mrtTokenManager);
 
         return (mbrVoting, mrtVoting);
+    }
+
+    function _setupDotVoting (
+        Kernel _dao,
+        MiniMeToken _mrtToken,
+        uint256 _candidateSupportPct,
+        uint256 _minQuorum,
+        uint64 _voteDuration
+    ) internal returns (AddressBook addressBook, DotVoting dotVoting)
+    {
+        bytes32 addressBookAppId = apmNamehash("address-book");
+        bytes32 dotVotingAppId = apmNamehash("dot-voting");
+
+        addressBook = AddressBook(
+            _dao.newAppInstance(addressBookAppId, _latestVersionAppBase(addressBookAppId))
+        );
+        dotVoting = DotVoting(
+            _dao.newAppInstance(dotVotingAppId, _latestVersionAppBase(dotVotingAppId))
+        );
+
+        addressBook.initialize();
+        dotVoting.initialize(_mrtToken, _minQuorum, _candidateSupportPct, _voteDuration);
     }
 
     function _setupPermissions(
