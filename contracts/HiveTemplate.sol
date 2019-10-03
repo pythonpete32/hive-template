@@ -3,6 +3,7 @@ pragma solidity 0.4.24;
 import "@aragon/apps-shared-minime/contracts/MiniMeToken.sol";
 import "@aragon/templates-shared/contracts/BaseTemplate.sol";
 import "./tps/AddressBook.sol";
+import "./tps/Allocations.sol";
 import { DotVoting } from "./tps/DotVoting.sol";
 
 
@@ -204,15 +205,16 @@ contract HiveTemplate is BaseTemplate {
         uint256 _candidateSupportPct,
         uint256 _minQuorum,
         uint64 _voteDuration
-    ) internal returns (AddressBook addressBook, DotVoting dotVoting)
+    ) internal returns (DotVoting)
     {
         bytes32 dotVotingAppId = apmNamehash("dot-voting");
 
-        dotVoting = DotVoting(
+        DotVoting dotVoting = DotVoting(
             _dao.newAppInstance(dotVotingAppId, _latestVersionAppBase(dotVotingAppId))
         );
 
         dotVoting.initialize(_mrtToken, _minQuorum, _candidateSupportPct, _voteDuration);
+        return dotVoting;
     }
 
     function _installAddressBook (Kernel _dao) internal returns (AddressBook) {
@@ -224,6 +226,17 @@ contract HiveTemplate is BaseTemplate {
 
         addressBook.initialize();
         return addressBook;
+    }
+
+    function _installAllocations (Kernel _dao, AddressBook _addressBook, Vault _vault ) internal returns (Allocations) {
+        bytes32 allocationsAppId = apmNamehash("allocations");
+
+        Allocations allocations = Allocations(
+            _dao.newAppInstance(allocationsAppId, _latestVersionAppBase(allocationsAppId))
+        );
+
+        allocations.initialize(_addressBook, _vault);
+        return allocations;
     }
 
     function _setupPermissions(
