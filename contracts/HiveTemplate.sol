@@ -4,6 +4,7 @@ import "@aragon/apps-shared-minime/contracts/MiniMeToken.sol";
 import "@aragon/templates-shared/contracts/BaseTemplate.sol";
 import "./tps/AddressBook.sol";
 import "./tps/Allocations.sol";
+import "./tps/Rewards.sol";
 import { DotVoting } from "./tps/DotVoting.sol";
 
 
@@ -237,6 +238,17 @@ contract HiveTemplate is BaseTemplate {
 
         allocations.initialize(_addressBook, _vault);
         return allocations;
+    }
+
+    function _installRewards(Kernel _dao, Vault _vault) internal returns (Rewards) {
+        bytes32 rewardsAppId = apmNamehash("rewards");
+
+        Rewards rewards = Rewards(
+            _dao.newAppInstance(rewardsAppId, _latestVersionAppBase(rewardsAppId))
+        );
+
+        rewards.initialize(_vault);
+        return rewards;
     }
 
     function _setupPermissions(
