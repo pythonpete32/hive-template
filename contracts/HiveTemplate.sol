@@ -88,7 +88,7 @@ contract HiveTemplate is BaseTemplate {
         public
     {
         newTokens(_mbrName, _mbrSymbol,_mrtName, _mrtSymbol);
-        newInstance(_id, _holders, _stakes, _mbrVotingSettings, _mrtVotingSettings);
+        newInstance(_id, _holders, _stakes, _mbrVotingSettings, _mrtVotingSettings, _dotVotingSettings);
     }
 
     /**
@@ -119,6 +119,7 @@ contract HiveTemplate is BaseTemplate {
     * @param _stakes Array of merit token stakes for holders (token has 18 decimals, multiply token amount `* 10^18`)
     * @param _mbrVotingSettings Array of [supportRequired, minAcceptanceQuorum, voteDuration] to set up the voting app of the organization
     * @param _mrtVotingSettings Array of [supportRequired, minAcceptanceQuorum, voteDuration] to set up the voting app of the organization
+    * @param _dotVotingSettings Array of [_minQuorum, _candidateSupportPct, _voteTime] to set up the dot voting app of the organization
     */
 
     function newInstance(
@@ -126,7 +127,8 @@ contract HiveTemplate is BaseTemplate {
         address[] memory _holders,
         uint256[] memory _stakes,
         uint64[3] memory _mbrVotingSettings,
-        uint64[3] memory _mrtVotingSettings
+        uint64[3] memory _mrtVotingSettings,
+        uint64[3] _dotVotingSettings
     )
         public
     {
@@ -134,7 +136,14 @@ contract HiveTemplate is BaseTemplate {
 
         (Kernel dao, ACL acl) = _createDAO();
 
-        (Voting mbrVoting, Voting mrtVoting) = _setupApps(dao, acl, _holders, _stakes, _mbrVotingSettings, _mrtVotingSettings);
+        (
+            Voting mbrVoting,
+            Voting mrtVoting,
+            MiniMeToken mrtToken,
+            Vault vault
+        ) = _setupApps(dao, acl, _holders, _stakes, _mbrVotingSettings, _mrtVotingSettings);
+
+        _setupTps(dao, acl, mrtToken, vault, _dotVotingSettings,  mbrVoting,  mrtVoting);
         _transferRootPermissionsFromTemplateAndFinalizeDAO(dao, mbrVoting);
         _registerID(_id, dao);
     }
@@ -182,7 +191,7 @@ contract HiveTemplate is BaseTemplate {
         uint64[3] memory _mrtVotingSettings
     )
         internal
-        returns (Voting, Voting)
+        returns (Voting, Voting, MiniMeToken, Vault)
     {
         (MiniMeToken mbrToken, MiniMeToken mrtToken) = _popTokenCache(msg.sender);
         Vault vault = _installVaultApp(_dao);
@@ -198,7 +207,7 @@ contract HiveTemplate is BaseTemplate {
 
         _setupPermissions(_acl, vault, mbrVoting, mrtVoting, mbrTokenManager, mrtTokenManager);
 
-        return (mbrVoting, mrtVoting);
+        return (mbrVoting, mrtVoting, mrtToken, vault);
     }
 
     function _setupTps(
