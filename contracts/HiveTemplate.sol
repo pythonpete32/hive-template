@@ -17,6 +17,7 @@ contract HiveTemplate is BaseTemplate {
     string constant private ERROR_BAD_VOTE_SETTINGS = "COMPANY_BAD_VOTE_SETTINGS";
 
     uint64 constant PCT64 = 10 ** 16;
+    address constant ANY_ENTITY = address(-1);
 
     struct TokenCache {
         address owner;
@@ -205,12 +206,18 @@ contract HiveTemplate is BaseTemplate {
         ACL _acl,
         MiniMeToken _mrtToken,
         Vault _vault,
-        uint64[3] _dotVotingSettings
+        uint64[3] _dotVotingSettings,
+        Voting _mbrVoting,
+        Voting _mrtVoting
     )
         internal
     {
         AddressBook addressBook = _installAddressBook(_dao);
         DotVoting dotVoting = _installDotVoting(_dao, _mrtToken, _dotVotingSettings);
+        Allocations allocations = _installAllocations(_dao, addressBook, _vault);
+        Rewards rewards = _installRewards(_dao, _vault);
+
+        _setupTpsPermissions(_acl, addressBook, dotVoting, allocations, rewards, _mbrVoting, _mrtVoting);
     }
 
     function _installDotVoting (
@@ -260,6 +267,49 @@ contract HiveTemplate is BaseTemplate {
 
         rewards.initialize(_vault);
         return rewards;
+    }
+
+    function _setupTpsPermissions(
+        ACL acl,
+        AddressBook addressBook,
+        DotVoting dotVoting,
+        Allocations allocations,
+        Rewards rewards,
+        Voting mbrVoting,
+        Voting mrtVoting
+    )
+        internal
+    {
+        acl.createPermission(mbrVoting, addressBook, addressBook.ADD_ENTRY_ROLE(), mbrVoting);
+        acl.createPermission(mbrVoting, addressBook, addressBook.REMOVE_ENTRY_ROLE(), mbrVoting);
+        emit InstalledApp(addressBook, apmNamehash("address-book"));
+
+
+        /**  Projects permissions: <-- add these after i include projects app
+        acl.createPermission(voting, projects, projects.FUND_ISSUES_ROLE(), voting);
+        acl.createPermission(voting, projects, projects.ADD_REPO_ROLE(), voting);
+        acl.createPermission(voting, projects, projects.CHANGE_SETTINGS_ROLE(), voting);
+        acl.createPermission(dotVoting, projects, projects.CURATE_ISSUES_ROLE(), voting);
+        acl.createPermission(voting, projects, projects.REMOVE_REPO_ROLE(), voting);
+        acl.createPermission(voting, projects, projects.REVIEW_APPLICATION_ROLE(), voting);
+        acl.createPermission(voting, projects, projects.WORK_REVIEW_ROLE(), voting);
+        emit InstalledApp(projects, planningAppIds[uint8(PlanningApps.Projects)]);
+        */
+
+        // Dot-voting permissions
+        acl.createPermission(ANY_ENTITY, dotVoting, dotVoting.ROLE_CREATE_VOTES(), mbrVoting);
+        acl.createPermission(ANY_ENTITY, dotVoting, dotVoting.ROLE_ADD_CANDIDATES(), mbrVoting);
+        emit InstalledApp(dotVoting, apmNamehash("dot-voting"));
+
+        // Allocations permissions:
+        acl.createPermission(mbrVoting, allocations, allocations.CREATE_ACCOUNT_ROLE(), mbrVoting);
+        acl.createPermission(dotVoting, allocations, allocations.CREATE_ALLOCATION_ROLE(), mbrVoting);
+        acl.createPermission(ANY_ENTITY, allocations, allocations.EXECUTE_ALLOCATION_ROLE(), mbrVoting);
+        emit InstalledApp(allocations, apmNamehash("allocations"));
+
+        // Rewards permissions:
+        acl.createPermission(mbrVoting, rewards, rewards.ADD_REWARD_ROLE(), mbrVoting);
+        emit InstalledApp(rewards, apmNamehash("rewards"));
     }
 
     function _setupPermissions(
