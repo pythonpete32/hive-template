@@ -200,12 +200,23 @@ contract HiveTemplate is BaseTemplate {
         return (mbrVoting, mrtVoting);
     }
 
+    function _setupTps(
+        Kernel _dao,
+        ACL _acl,
+        MiniMeToken _mrtToken,
+        Vault _vault,
+        uint64[3] _dotVotingSettings
+    )
+        internal
+    {
+        AddressBook addressBook = _installAddressBook(_dao);
+        DotVoting dotVoting = _installDotVoting(_dao, _mrtToken, _dotVotingSettings);
+    }
+
     function _installDotVoting (
         Kernel _dao,
         MiniMeToken _mrtToken,
-        uint256 _candidateSupportPct,
-        uint256 _minQuorum,
-        uint64 _voteDuration
+        uint64[3] _dotVotingSettings
     ) internal returns (DotVoting)
     {
         bytes32 dotVotingAppId = apmNamehash("dot-voting");
@@ -214,7 +225,7 @@ contract HiveTemplate is BaseTemplate {
             _dao.newAppInstance(dotVotingAppId, _latestVersionAppBase(dotVotingAppId))
         );
 
-        dotVoting.initialize(_mrtToken, _minQuorum, _candidateSupportPct, _voteDuration);
+        dotVoting.initialize(_mrtToken, _dotVotingSettings[0], _dotVotingSettings[1], _dotVotingSettings[2]);
         return dotVoting;
     }
 
