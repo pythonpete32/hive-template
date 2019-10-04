@@ -211,7 +211,7 @@ contract HiveTemplate is BaseTemplate {
     }
 
     function _setupTps(
-        Kernel _dao,
+        Kernel _dao,mrtToken
         ACL _acl,
         MiniMeToken _mrtToken,
         Vault _vault,
