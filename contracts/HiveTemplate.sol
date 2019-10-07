@@ -99,9 +99,10 @@ contract HiveTemplate is BaseTemplate {
             Voting mrtVoting
         ) = _popCache(msg.sender);
 
-        Vault vault = _setupApps(dao, ACL(dao.acl), mbrVoting, mrtVoting, mbrTokenManager, mrtTokenManager, _holders, _stakes);
+        // type conversion is a bit hacky but it just about keeps us under the stack limit
+        Vault vault = _setupApps(dao, ACL(dao.acl()), mbrVoting, mrtVoting, mbrTokenManager, mrtTokenManager, _holders, _stakes);
 
-        _setupTps(dao, ACL(dao.acl), MiniMeToken(mrtTokenManager.token), vault, _dotVotingSettings,  mbrVoting,  mrtVoting);
+        _setupTps(dao, ACL(dao.acl()), mrtTokenManager.token(), vault, _dotVotingSettings,  mbrVoting,  mrtVoting);
         _transferRootPermissionsFromTemplateAndFinalizeDAO(dao, mbrVoting);
         _registerID(_id, dao);
     }
@@ -124,13 +125,13 @@ contract HiveTemplate is BaseTemplate {
         require(cache.owner != address(0), ERROR_MISSING_TOKEN_CACHE);
 
         Kernel dao = cache.dao;
-        TokenManager mbrTokenManager = cache.mbrTokenManager;
-        TokenManager mrtTokenManager = cache.mrtTokenManager;
+        TokenManager mbrTokenManager = cache.mbrManager;
+        TokenManager mrtTokenManager = cache.mrtManager;
         Voting mbrVoting = cache.mbrVoting;
         Voting mrtVoting = cache.mrtVoting;
 
-        delete cache.mbrTokenManager;
-        delete cache.mrtTokenManager;
+        delete cache.mbrManager;
+        delete cache.mrtManager;
         delete cache.owner;
         delete cache.mbrVoting;
         delete cache.mrtVoting;
@@ -157,6 +158,8 @@ contract HiveTemplate is BaseTemplate {
     function _setupApps(
         Kernel _dao,
         ACL _acl,
+        Voting _mbrVoting,
+        Voting _mrtVoting,
         TokenManager _mbrTokenManager,
         TokenManager _mrtTokenManager,
         address[] memory _holders,
@@ -170,7 +173,7 @@ contract HiveTemplate is BaseTemplate {
         _mintTokens(_acl, _mbrTokenManager, _holders, _stakes);
         _mintTokens(_acl, _mrtTokenManager, _holders, _stakes);
 
-        _setupPermissions(_acl, vault, mbrVoting, mrtVoting, _mbrTokenManager, _mrtTokenManager);
+        _setupPermissions(_acl, vault, _mbrVoting, _mrtVoting, _mbrTokenManager, _mrtTokenManager);
 
         return (vault);
     }
