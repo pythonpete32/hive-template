@@ -81,7 +81,7 @@ contract HiveTemplate is BaseTemplate {
     * @param _dotVotingSettings Array of [_minQuorum, _candidateSupportPct, _voteTime] to set up the dot voting app of the organization
     */
 
-    function newInstance(
+    function finalizeInstance(
         string memory _id,
         address[] memory _holders,
         uint256[] memory _stakes,
