@@ -1,19 +1,7 @@
 {
-  "roles": [
-    {
-      "name": "Increment the counter",
-      "id": "INCREMENT_ROLE",
-      "params": []
-    },
-    {
-      "name": "Decrement the counter",
-      "id": "DECREMENT_ROLE",
-      "params": []
-    }
-  ],
   "environments": {
     "default": {
-      "network": "development",
+      "network": "rpc",
       "appName": "hive-template.open.aragonpm.eth"
     },
     "rinkeby": {
@@ -29,5 +17,5 @@
       "network": "mainnet"
     }
   },
-  "path": "contracts/CounterApp.sol"
+  "path": "contracts/HiveTemplate.sol"
 }
