@@ -9704,7 +9704,7 @@ contract HiveTemplate is BaseTemplate {
     }
 
     function _installAddressBook (Kernel _dao) internal returns (AddressBook) {
-        bytes32 addressBookAppId = apmNamehash("address-book");
+        bytes32 addressBookAppId = keccak256(abi.encodePacked(apmNamehash("open"), keccak256("address-book")));
 
         AddressBook addressBook = AddressBook(
             _dao.newAppInstance(addressBookAppId, _latestVersionAppBase(addressBookAppId))
