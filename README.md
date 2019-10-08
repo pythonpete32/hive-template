@@ -33,7 +33,7 @@ creating a 1Hive DAO requires calling two functions. each creates a transaction
 this can be run using AragonCli with the following command :
 
 ```sh
-dao new --template hive-template --fn prepareInstance --fn-args "Bee Token" BEE "Honey Token" HONEY  ['"500000000000000000","50000000000000000","604800"'] ['"500000000000000000","50000000000000000","604800"'] --environment aragon:rinkeby
+dao new --template hive-template --fn prepareInstance --fn-args "BeeToken" BEE "HoneyToken" HONEY  ['"500000000000000000","50000000000000000","604800"'] ['"500000000000000000","50000000000000000","604800"'] --environment aragon:rinkeby
 ```
 
 <br/>
