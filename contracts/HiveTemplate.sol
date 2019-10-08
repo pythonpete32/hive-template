@@ -206,7 +206,7 @@ contract HiveTemplate is BaseTemplate {
         uint64[3] _dotVotingSettings
     ) internal returns (DotVoting)
     {
-        bytes32 dotVotingAppId = keccak256(abi.encodePacked(apmNamehash("open"), keccak256("dot-voting"));
+        bytes32 dotVotingAppId = keccak256(abi.encodePacked(apmNamehash("open"), keccak256("dot-voting")));
 
         DotVoting dotVoting = DotVoting(
             _dao.newAppInstance(dotVotingAppId, _latestVersionAppBase(dotVotingAppId))
