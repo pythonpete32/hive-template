@@ -1,26 +1,14 @@
 {
-  "roles": [
-    {
-      "name": "Increment the counter",
-      "id": "INCREMENT_ROLE",
-      "params": []
-    },
-    {
-      "name": "Decrement the counter",
-      "id": "DECREMENT_ROLE",
-      "params": []
-    }
-  ],
   "environments": {
     "default": {
-      "network": "development",
+      "network": "rpc",
       "appName": "hive-template.open.aragonpm.eth"
     },
     "rinkeby": {
-      "registry": "0x98df287b6c145399aaa709692c8d308357bc085d",
-      "appName": "hive-template.open.aragonpm.eth",
-      "wsRPC": "wss://rinkeby.eth.aragon.network/ws",
-      "network": "rinkeby"
+      "appName": "hive-template.aragonpm.eth",
+      "address": "0xf313a83432cdc68585bcdf2d1a6507d0e804b99a",
+      "network": "rinkeby",
+      "registry": "0x98Df287B6C145399Aaa709692c8D308357bC085D"
     },
     "mainnet": {
       "registry": "0x314159265dd8dbb310642f98f50c066173c1259b",
@@ -29,5 +17,5 @@
       "network": "mainnet"
     }
   },
-  "path": "contracts/CounterApp.sol"
+  "path": "contracts/HiveTemplate.sol"
 }

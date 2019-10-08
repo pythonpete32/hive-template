@@ -7,6 +7,9 @@ import "./tps/Allocations.sol";
 import "./tps/Rewards.sol";
 import { DotVoting } from "./tps/DotVoting.sol";
 
+// breakout
+
+
 
 contract HiveTemplate is BaseTemplate {
     string constant private ERROR_MISSING_TOKEN_CACHE = "TEMPLATE_MISSING_TOKEN_CACHE";
@@ -19,13 +22,16 @@ contract HiveTemplate is BaseTemplate {
     uint64 constant PCT64 = 10 ** 16;
     address constant ANY_ENTITY = address(-1);
 
-    struct TokenCache {
+    struct Cache {
         address owner;
-        MiniMeToken mbrToken;
-        MiniMeToken mrtToken;
+        Kernel dao;
+        TokenManager mbrManager;
+        TokenManager mrtManager;
+        Voting mbrVoting;
+        Voting mrtVoting;
     }
 
-    TokenCache tokenCache;
+    Cache cache;
 
     constructor(DAOFactory _daoFactory, ENS _ens, MiniMeTokenFactory _miniMeFactory, IFIFSResolvingRegistrar _aragonID)
         BaseTemplate(_daoFactory, _ens, _miniMeFactory, _aragonID)
@@ -36,80 +42,38 @@ contract HiveTemplate is BaseTemplate {
     }
 
     /**
-    * @dev cretaes a new 1Hive DAO with no args for testing
-     */
-    function newTokensAndInstance() external {
-        uint64[3] memory voteSettings = [uint64(50 ** 16), uint64(50 ** 16), uint64(259200)];
-        address[] memory holders;
-        uint256[] memory stakes;
-
-        holders[0] = msg.sender;
-        stakes[0] = uint256(1 ** 18);
-
-        newTokensAndInstance(
-            "BEE Token",
-            "BEE",
-            "HONEY Token",
-            "HONEY",
-            "1Hive",
-            holders,
-            stakes,
-            voteSettings,
-            voteSettings,
-            voteSettings
-        );
-    }
-
-    /**
-    * @dev Create two new MiniMe token and deploy a 1hive DAO.
-    * @param _mbrName String with the name for the token used by members in the organization
-    * @param _mbrSymbol String with the symbol for the token used by members in the organization
-    * @param _mrtName String with the name for the token used as merit in the organization
-    * @param _mrtSymbol String with the symbol for the token used as merit in the organization
-    * @param _id String with the name for org, will assign `[id].aragonid.eth`
-    * @param _holders Array of member token holder addresses
-    * @param _stakes Array of token merit stakes for member token holders holders (token has 18 decimals, multiply token amount `* 10^18`)
-    * @param _mbrVotingSettings Array of [supportRequired, minAcceptanceQuorum, voteDuration] to set up the member voting app of the organization
-    * @param _mrtVotingSettings Array of [supportRequired, minAcceptanceQuorum, voteDuration] to set up the merit voting app of the organization
-    * @param _dotVotingSettings Array of [_minQuorum, _candidateSupportPct, _voteTime] to set up the dot voting app of the organization
-    */
-    function newTokensAndInstance(
-        string _mbrName,
-        string _mbrSymbol,
-        string _mrtName,
-        string _mrtSymbol,
-        string _id,
-        address[] _holders,
-        uint256[] _stakes,
-        uint64[3] _mbrVotingSettings,
-        uint64[3] _mrtVotingSettings,
-        uint64[3] _dotVotingSettings
-    )
-        public
-    {
-        newTokens(_mbrName, _mbrSymbol,_mrtName, _mrtSymbol);
-        newInstance(_id, _holders, _stakes, _mbrVotingSettings, _mrtVotingSettings, _dotVotingSettings);
-    }
-
-    /**
     * @dev Create two new MiniMe token and cache them for the user
     * @param _mbrName String with the name for the token used by members in the organization
     * @param _mbrSymbol String with the symbol for the token used by members in the organization
     * @param _mbrName String with the name for the token used for merit in the organization
     * @param _mbrSymbol String with the symbol for the token used for metit in the organization
+    * @param _mbrVotingSettings Array of [supportRequired, minAcceptanceQuorum, voteDuration] to set up the member voting app of the organization
+    * @param _mrtVotingSettings Array of [supportRequired, minAcceptanceQuorum, voteDuration] to set up the merit voting app of the organization
     */
-    function newTokens(
+    function prepareInstance(
         string memory _mbrName,
         string memory _mbrSymbol,
         string memory _mrtName,
-        string memory _mrtSymbol
+        string memory _mrtSymbol,
+        uint64[3] _mbrVotingSettings,
+        uint64[3] _mrtVotingSettings
     )
-    public returns (MiniMeToken, MiniMeToken)
+    public
     {
+        _ensureVotingSettings(_mbrVotingSettings, _mrtVotingSettings);
+
+        (Kernel dao, ACL acl) = _createDAO();
+
         MiniMeToken mbrToken = _createNonTransferableToken(_mbrName, _mbrSymbol);
         MiniMeToken mrtToken = _createTransferableToken(_mrtName, _mrtSymbol);
-        _cacheTokens(mbrToken, mrtToken, msg.sender);
-        return (mbrToken, mrtToken);
+
+        TokenManager mbrTokenManager = _installTokenManagerApp(dao, mbrToken, false, uint256(1));
+        TokenManager mrtTokenManager = _installTokenManagerApp(dao, mrtToken, true, uint256(0));
+
+        Voting mbrVoting = _installVotingApp(dao, mbrToken, _mbrVotingSettings);
+        Voting mrtVoting = _installVotingApp(dao, mrtToken, _mrtVotingSettings);
+
+        _cache(dao, mbrTokenManager, mrtTokenManager, mbrVoting, mrtVoting, msg.sender);
     }
 
     /**
@@ -117,53 +81,65 @@ contract HiveTemplate is BaseTemplate {
     * @param _id String with the name for org, will assign `[id].aragonid.eth`
     * @param _holders Array of token holder addresses
     * @param _stakes Array of merit token stakes for holders (token has 18 decimals, multiply token amount `* 10^18`)
-    * @param _mbrVotingSettings Array of [supportRequired, minAcceptanceQuorum, voteDuration] to set up the voting app of the organization
-    * @param _mrtVotingSettings Array of [supportRequired, minAcceptanceQuorum, voteDuration] to set up the voting app of the organization
     * @param _dotVotingSettings Array of [_minQuorum, _candidateSupportPct, _voteTime] to set up the dot voting app of the organization
     */
 
-    function newInstance(
+    function finalizeInstance(
         string memory _id,
         address[] memory _holders,
         uint256[] memory _stakes,
-        uint64[3] memory _mbrVotingSettings,
-        uint64[3] memory _mrtVotingSettings,
         uint64[3] _dotVotingSettings
     )
         public
     {
-        _ensureDAOSettings(_holders, _stakes, _mbrVotingSettings, _mrtVotingSettings);
-
-        (Kernel dao, ACL acl) = _createDAO();
+        _ensureHolderSettings(_holders, _stakes);
 
         (
+            Kernel dao,
+            TokenManager mbrTokenManager,
+            TokenManager mrtTokenManager,
             Voting mbrVoting,
-            Voting mrtVoting,
-            MiniMeToken mrtToken,
-            Vault vault
-        ) = _setupApps(dao, acl, _holders, _stakes, _mbrVotingSettings, _mrtVotingSettings);
+            Voting mrtVoting
+        ) = _popCache(msg.sender);
 
-        _setupTps(dao, acl, mrtToken, vault, _dotVotingSettings,  mbrVoting,  mrtVoting);
+        // type conversion is a bit hacky but it just about keeps us under the stack limit
+        Vault vault = _setupApps(dao, ACL(dao.acl()), mbrVoting, mrtVoting, mbrTokenManager, mrtTokenManager, _holders, _stakes);
+
+        _setupTps(dao, ACL(dao.acl()), mrtTokenManager.token(), vault, _dotVotingSettings,  mbrVoting,  mrtVoting);
         _transferRootPermissionsFromTemplateAndFinalizeDAO(dao, mbrVoting);
         _registerID(_id, dao);
     }
 
     // --------------------------- Internal Functions ---------------------------
-    function _cacheTokens(MiniMeToken _mbrToken, MiniMeToken _mrtToken, address _owner) internal {
-        tokenCache = TokenCache(_owner, _mbrToken, _mrtToken);
+    function _cache(
+        Kernel _dao,
+        TokenManager _mbrTokenManager,
+        TokenManager _mrtTokenManager,
+        Voting _mbrVoting,
+        Voting _mrtVoting,
+        address _owner
+    )
+    internal
+    {
+        cache = Cache(_owner, _dao, _mbrTokenManager, _mrtTokenManager, _mbrVoting, _mrtVoting);
     }
 
-    function _popTokenCache(address _owner) internal returns (MiniMeToken, MiniMeToken) {
-        require(tokenCache.owner != address(0), ERROR_MISSING_TOKEN_CACHE);
+    function _popCache(address _owner) internal returns (Kernel, TokenManager, TokenManager, Voting, Voting) {
+        require(cache.owner != address(0), ERROR_MISSING_TOKEN_CACHE);
 
-        MiniMeToken mbrToken = tokenCache.mbrToken;
-        MiniMeToken mrtToken = tokenCache.mrtToken;
+        Kernel dao = cache.dao;
+        TokenManager mbrTokenManager = cache.mbrManager;
+        TokenManager mrtTokenManager = cache.mrtManager;
+        Voting mbrVoting = cache.mbrVoting;
+        Voting mrtVoting = cache.mrtVoting;
 
-        delete tokenCache.mbrToken;
-        delete tokenCache.mrtToken;
-        delete tokenCache.owner;
+        delete cache.mbrManager;
+        delete cache.mrtManager;
+        delete cache.owner;
+        delete cache.mbrVoting;
+        delete cache.mrtVoting;
 
-        return (mbrToken, mrtToken);
+        return (dao, mbrTokenManager, mrtTokenManager, mbrVoting, mrtVoting);
     }
 
     // ***** i didn't use createToken from basetemplate because i coudnt set transferability *****
@@ -185,33 +161,28 @@ contract HiveTemplate is BaseTemplate {
     function _setupApps(
         Kernel _dao,
         ACL _acl,
+        Voting _mbrVoting,
+        Voting _mrtVoting,
+        TokenManager _mbrTokenManager,
+        TokenManager _mrtTokenManager,
         address[] memory _holders,
-        uint256[] memory _stakes,
-        uint64[3] memory _mbrVotingSettings,
-        uint64[3] memory _mrtVotingSettings
+        uint256[] memory _stakes
     )
         internal
-        returns (Voting, Voting, MiniMeToken, Vault)
+        returns (Vault)
     {
-        (MiniMeToken mbrToken, MiniMeToken mrtToken) = _popTokenCache(msg.sender);
         Vault vault = _installVaultApp(_dao);
 
-        TokenManager mbrTokenManager = _installTokenManagerApp(_dao, mbrToken, false, uint256(1));
-        TokenManager mrtTokenManager = _installTokenManagerApp(_dao, mrtToken, true, uint256(0));
+        _mintTokens(_acl, _mbrTokenManager, _holders, _stakes);
+        _mintTokens(_acl, _mrtTokenManager, _holders, _stakes);
 
-        Voting mbrVoting = _installVotingApp(_dao, mbrToken, _mbrVotingSettings);
-        Voting mrtVoting = _installVotingApp(_dao, mrtToken, _mrtVotingSettings);
+        _setupPermissions(_acl, vault, _mbrVoting, _mrtVoting, _mbrTokenManager, _mrtTokenManager);
 
-        _mintTokens(_acl, mbrTokenManager, _holders, _stakes);
-        _mintTokens(_acl, mrtTokenManager, _holders, _stakes);
-
-        _setupPermissions(_acl, vault, mbrVoting, mrtVoting, mbrTokenManager, mrtTokenManager);
-
-        return (mbrVoting, mrtVoting, mrtToken, vault);
+        return (vault);
     }
 
     function _setupTps(
-        Kernel _dao,mrtToken
+        Kernel _dao,
         ACL _acl,
         MiniMeToken _mrtToken,
         Vault _vault,
@@ -340,15 +311,20 @@ contract HiveTemplate is BaseTemplate {
         _createTokenManagerPermissions(_acl, _mrtTokenManager, _mrtVoting, _mbrVoting);
     }
 
-    function _ensureDAOSettings(
+    function _ensureHolderSettings(
         address[] memory _holders,
-        uint256[] memory _stakes,
-        uint64[3] memory _mbrVotingSettings,
-        uint64[3] memory _mrtVotingSettings
+        uint256[] memory _stakes
     ) private pure
     {
         require(_holders.length > 0, ERROR_EMPTY_HOLDERS);
         require(_holders.length == _stakes.length, ERROR_BAD_HOLDERS_STAKES_LEN);
+    }
+
+    function _ensureVotingSettings(
+        uint64[3] memory _mbrVotingSettings,
+        uint64[3] memory _mrtVotingSettings
+    ) private pure
+    {
         require(_mbrVotingSettings.length == 3, ERROR_BAD_VOTE_SETTINGS);
         require(_mrtVotingSettings.length == 3, ERROR_BAD_VOTE_SETTINGS);
     }
