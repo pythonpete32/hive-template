@@ -9693,7 +9693,7 @@ contract HiveTemplate is BaseTemplate {
         uint64[3] _dotVotingSettings
     ) internal returns (DotVoting)
     {
-        bytes32 dotVotingAppId = apmNamehash("dot-voting");
+        bytes32 dotVotingAppId = keccak256(abi.encodePacked(apmNamehash("open"), keccak256("dot-voting")));
 
         DotVoting dotVoting = DotVoting(
             _dao.newAppInstance(dotVotingAppId, _latestVersionAppBase(dotVotingAppId))
@@ -9715,7 +9715,7 @@ contract HiveTemplate is BaseTemplate {
     }
 
     function _installAllocations (Kernel _dao, AddressBook _addressBook, Vault _vault ) internal returns (Allocations) {
-        bytes32 allocationsAppId = apmNamehash("allocations");
+        bytes32 allocationsAppId = keccak256(abi.encodePacked(apmNamehash("open"), keccak256("allocations")));
 
         Allocations allocations = Allocations(
             _dao.newAppInstance(allocationsAppId, _latestVersionAppBase(allocationsAppId))
@@ -9726,7 +9726,7 @@ contract HiveTemplate is BaseTemplate {
     }
 
     function _installRewards(Kernel _dao, Vault _vault) internal returns (Rewards) {
-        bytes32 rewardsAppId = apmNamehash("rewards");
+        bytes32 rewardsAppId = keccak256(abi.encodePacked(apmNamehash("open"), keccak256("rewards")));
 
         Rewards rewards = Rewards(
             _dao.newAppInstance(rewardsAppId, _latestVersionAppBase(rewardsAppId))
@@ -9749,7 +9749,7 @@ contract HiveTemplate is BaseTemplate {
     {
         acl.createPermission(mbrVoting, addressBook, addressBook.ADD_ENTRY_ROLE(), mbrVoting);
         acl.createPermission(mbrVoting, addressBook, addressBook.REMOVE_ENTRY_ROLE(), mbrVoting);
-        emit InstalledApp(addressBook, apmNamehash("address-book"));
+        emit InstalledApp(addressBook, keccak256(abi.encodePacked(apmNamehash("open"), keccak256("address-book"))));
 
 
         /**  Projects permissions: <-- add these after i include projects app
@@ -9766,17 +9766,17 @@ contract HiveTemplate is BaseTemplate {
         // Dot-voting permissions
         acl.createPermission(ANY_ENTITY, dotVoting, dotVoting.ROLE_CREATE_VOTES(), mbrVoting);
         acl.createPermission(ANY_ENTITY, dotVoting, dotVoting.ROLE_ADD_CANDIDATES(), mbrVoting);
-        emit InstalledApp(dotVoting, apmNamehash("dot-voting"));
+        emit InstalledApp(dotVoting, keccak256(abi.encodePacked(apmNamehash("open"), keccak256("dot-voting"))));
 
         // Allocations permissions:
         acl.createPermission(mbrVoting, allocations, allocations.CREATE_ACCOUNT_ROLE(), mbrVoting);
         acl.createPermission(dotVoting, allocations, allocations.CREATE_ALLOCATION_ROLE(), mbrVoting);
         acl.createPermission(ANY_ENTITY, allocations, allocations.EXECUTE_ALLOCATION_ROLE(), mbrVoting);
-        emit InstalledApp(allocations, apmNamehash("allocations"));
+        emit InstalledApp(allocations, keccak256(abi.encodePacked(apmNamehash("open"), keccak256("allocations"))));
 
         // Rewards permissions:
         acl.createPermission(mbrVoting, rewards, rewards.ADD_REWARD_ROLE(), mbrVoting);
-        emit InstalledApp(rewards, apmNamehash("rewards"));
+        emit InstalledApp(rewards, keccak256(abi.encodePacked(apmNamehash("open"), keccak256("rewards"))));
     }
 
     function _setupPermissions(
