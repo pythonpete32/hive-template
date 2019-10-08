@@ -2,12 +2,13 @@
   "environments": {
     "default": {
       "network": "rpc",
-      "appName": "hive-template.open.aragonpm.eth"
+      "appName": "hive-template-staging.open.aragonpm.eth"
     },
     "rinkeby": {
-      "appName": "hive-template.aragonpm.eth",
-      "address": "0xf313a83432cdc68585bcdf2d1a6507d0e804b99a",
+      "appName": "hive-template-staging.open.aragonpm.eth",
+      "address": "0x9c263dd8cdb47ac20f783edfc81ef71d1db762e6",
       "network": "rinkeby",
+      "wsRPC": "wss://rinkeby.eth.aragon.network/ws",
       "registry": "0x98Df287B6C145399Aaa709692c8D308357bC085D"
     },
     "mainnet": {

@@ -2,7 +2,7 @@
   "environments": {
     "devnet": {
       "appName": "hive-template.aragonpm.eth",
-      "address": "0x6e0745b6b18d0233708554049eeaab0cb81c4ab0",
+      "address": "0x777382ca6a5324085a7f88976e568c130162a253",
       "network": "devnet",
       "registry": "0x5f6f7e8cc7346a11ca2def8f827b7a0b612c56a1"
     }
