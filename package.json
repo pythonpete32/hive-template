@@ -44,7 +44,6 @@
     "start": "npm run start:ipfs",
     "prepublishOnly": "npm run compile && npm run abi:extract -- --no-compile",
     "abi:extract": "truffle-extract --output abi/ --keys abi",
-    "deploy:aragen": "npm run compile && truffle exec ./scripts/deploy.js --network rpc --ens 0x5f6f7e8cc7346a11ca2def8f827b7a0b612c56a1 --dao-factory 0x5d94e3e7aec542ab0f9129b9a7badeb5b3ca0f77 --mini-me-factory 0xd526b7aba39cccf76422835e7fd5327b98ad73c9 --register false",
     "deploy:rpc": "npm run compile && truffle exec ./scripts/deploy.js --network rpc",
     "deploy:rinkeby": "npm run compile && truffle exec ./scripts/deploy.js --network rinkeby --ens 0x98Df287B6C145399Aaa709692c8D308357bC085D --dao-factory 0xad4d106b43b480faa3ef7f98464ffc27fc1faa96 --mini-me-factory 0x6ffeb4038f7f077c4d20eaf1706980caec31e2bf",
     "start:ipfs": "aragon run --files dist",

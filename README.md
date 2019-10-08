@@ -1,125 +1,63 @@
-# Aragon React Boilerplate
+# 1Hive Template (WIP)
 
-> 🕵️ [Find more boilerplates using GitHub](https://github.com/search?q=topic:aragon-boilerplate) |
-> ✨ [Official boilerplates](https://github.com/search?q=topic:aragon-boilerplate+org:aragon)
 
-React boilerplate for Aragon applications.
-
-This boilerplate includes a fully working example app, complete with a background worker and a front-end in React (with Aragon UI). Also comes with a DAO Template which will allow for using your app to interact with other Aragon apps like the Voting app. You can read more about DAO Template [here](https://hack.aragon.org/docs/templates-intro).
+The 1Hive Template is intended to allow organisations to simply deploy a DAO with the same structure and permissions as the 1Hive DAO
 
 ## Usage
 
-To setup use the command `create-aragon-app`:
+creating a 1Hive DAO requires calling two functions. each creates a transaction
+
+### Prepare an incomplete DAO:
 
 ```sh
-npx create-aragon-app <app-name> react
+    function prepareInstance(
+        string memory mbrName,
+        string memory mbrSymbol,
+        string memory mrtName,
+        string memory mrtSymbol,
+        uint64[3] mbrVotingSettings,
+        uint64[3] mrtVotingSettings
+    )
 ```
 
-## Structure
 
-This boilerplate has the following structure:
+- `mbrName`: String with the name for the token used by members in the organization
+- `mbrSymbol`: String with the symbol for the token used by members in the organization
+- `mbrName`: String with the name for the token used for merit in the organization
+- `mbrSymbol`: String with the symbol for the token used for metit in the organization
+- `mbrVotingSettings`: Array of [supportRequired, minAcceptanceQuorum, voteDuration] to set up the member voting app of the organization
+- `mrtVotingSettings`: Array of [supportRequired, minAcceptanceQuorum, voteDuration] to set up the merit voting app of the organization
 
-```md
-root
-├── app
-├ ├── src
-├ └── package.json
-├── contracts
-├ ├── CounterApp.sol
-├ └── Template.sol
-├── migration
-├── test
-├── arapp.json
-├── manifest.json
-├── truffle.js
-└── package.json
-```
+<br/>
 
-- **app**: Frontend folder. Completely encapsulated, has its own package.json and dependencies.
-  - **src**: Source files.
-  - [**package.json**](https://docs.npmjs.com/creating-a-package-json-file): Frontend npm configuration file.
-- **contracts**: Smart Constracts folder.
-  - `CounterApp.sol`: Aragon app contract example.
-  - `Template.sol`: [Aragon Template](https://hack.aragon.org/docs/templates-intro) to deploy a fully functional DAO.
-- [**migrations**](https://truffleframework.com/docs/truffle/getting-started/running-migrations): Migrations folder.
-- **test**: Tests folder.
-- [**arapp.json**](https://hack.aragon.org/docs/cli-global-confg#the-arappjson-file): Aragon configuration file. Includes Aragon-specific metadata for your app.
-- [**manifest.json**](https://hack.aragon.org/docs/cli-global-confg#the-manifestjson-file): Aragon configuration file. Includes web-specific configurations.
-- [**truffle.js**](https://truffleframework.com/docs/truffle/reference/configuration): Truffle configuration file.
-- [**package.json**](https://docs.npmjs.com/creating-a-package-json-file): Main npm configuration file.
-
-## Make the template work with your app
-
-- Edit the roles defined in the template to configure your DAO as you want!
-
-## Run the template
+this can be run using AragonCli with the following command :
 
 ```sh
-npx aragon run --template Template --template-init @ARAGON_ENS
+dao new --template hive-template --fn prepareInstance --fn-args "Bee Token" BEE "Honey Token" HONEY  ['"500000000000000000","50000000000000000","604800"'] ['"500000000000000000","50000000000000000","604800"'] --environment aragon:rinkeby
 ```
 
-## Running your app
+<br/>
 
-### Using HTTP
+### Finalize DAO:
 
-Running your app using HTTP will allow for a faster development process of your app's front-end, as it can be hot-reloaded without the need to execute `aragon run` every time a change is made.
-
-- First start your app's development server running `npm run start:app`, and keep that process running. By default it will rebuild the app and reload the server when changes to the source are made.
-
-- After that, you can run `npm run start:http` or `npm run start:http:template` which will compile your app's contracts, publish the app locally and create a DAO. You will need to stop it and run it again after making changes to your smart contracts.
-
-Changes to the app's background script (`app/script.js`) cannot be hot-reloaded, after making changes to the script, you will need to either restart the development server (`npm run start:app`) or rebuild the script `npm run build:script`.
-
-### Using IPFS
-
-Running your app using IPFS will mimic the production environment that will be used for running your app. `npm run start:ipfs` will run your app using IPFS. Whenever a change is made to any file in your front-end, a new version of the app needs to be published, so the command needs to be restarted.
-
-## What's in this boilerplate?
-
-### npm Scripts
-
-- **start** or **start:ipfs**: Runs your app inside a DAO served from IPFS
-- **start:http**: Runs your app inside a DAO served with HTTP (hot reloading)
-- **start:ipfs:template**: Creates a DAO with the [Template](https://github.com/aragon/aragon-react-boilerplate/blob/master/contracts/Template.sol) and serves the app from IPFS
-- **start:http:template**: Creates a DAO with the [Template](https://github.com/aragon/aragon-react-boilerplate/blob/master/contracts/Template.sol) and serves the app with HTTP (hot reloading)
-- **prepare**: Installs dependencies of the front-end
-- **start:app**: Starts a development server for your app
-- **compile**: Compiles the smart contracts
-- **build**: Builds the front-end and background script
-- **test**: Runs tests for the contracts
-- **publish:patch**: Releases a patch version to aragonPM (only frontend/content changes allowed)
-- **publish:minor**: Releases a minor version to aragonPM (only frontend/content changes allowed)
-- **publish:major**: Releases a major version to aragonPM (frontend **and** contract changes)
-- **versions**: Checks the currently installed versions of the app
-- **lint**: Checks the app and the contracts for linting errors
-- **lint:fix**: Fixes the lint errors that can be resolved automatically
-- **coverage**: Runs the tests for the contracts and creates a report
-
-### Libraries
-
-- [**@aragon/os**](https://github.com/aragon/aragonos): Aragon interfaces
-- [**@aragon/api**](https://github.com/aragon/aragon.js/tree/master/packages/aragon-api): Wrapper for Aragon application RPC
-- [**@aragon/ui**](https://github.com/aragon/aragon-ui): Aragon UI components (in React)
-
-## What you can do with this boilerplate?
-
-### Publish
-
-You can publish you app on [aragonPM](https://hack.aragon.org/docs/apm). See how in our [publish guide](https://hack.aragon.org/docs/guides-publish).
-
-> **Note**<br>
-> The [Template](https://github.com/aragon/aragon-react-boilerplate/blob/master/contracts/Template.sol) will not be published.
-
-### Using a different Ethereum account
-
-You can use a different account to interact with you app. [Check the documentation](https://hack.aragon.org/docs/guides-faq#set-a-private-key).
-
-### Propagate content
-
-You can propagate the content of your app on IPFS. Learn more in our [troubleshooting guide](https://hack.aragon.org/docs/guides-faq#propagating-your-content-hash-through-ipfs) or use the `aragon ipfs propagate` command:
-
-```
-npx aragon ipfs propagate <cid>
+```sh
+    function finalizeInstance(
+        string memory id,
+        address[] memory holders,
+        uint256[] memory stakes,
+        uint64[3] dotVotingSettings
+    )
 ```
 
-Where `cid` is your content id hash (this will be displayed after publishing).
+- `id`: String with the name for org, will assign `[id].aragonid.eth`
+- `holders`: Array of token holder addresses
+- `stakes`: Array of merit token stakes for holders (token has 18 decimals, multiply token amount `* 10^18`)
+- `dotVotingSettings`: Array of [minQuorum, candidateSupportPct, voteTime] to set up the dot voting app of the organization
+
+<br/>
+
+this can be run using AragonCli with the following command :
+
+```sh
+dao new --template hive-template --fn finaliseInstance --fn-args "BeeHive" ['"0x123456789abcdef0123456789abcdef","0xabcdef9876543210abcdef0987654321"'] ['"1000000000000000000","1000000000000000000"'] ['"500000000000000000","50000000000000000","604800"'] --environment aragon:rinkeby
+```
