@@ -3,6 +3,13 @@
 
 The 1Hive Template is intended to allow organisations to simply deploy a DAO with the same structure and permissions as the 1Hive DAO
 
+## Publish
+You can publish the template to the devchain with
+
+```
+publish:major:devchain
+```
+
 ## Usage
 
 creating a 1Hive DAO requires calling two functions. each creates a transaction
@@ -33,7 +40,11 @@ creating a 1Hive DAO requires calling two functions. each creates a transaction
 this can be run using AragonCli with the following command :
 
 ```sh
+<<<<<<< HEAD
 dao new --template hive-template --fn prepareInstance --fn-args "BeeToken" BEE "HoneyToken" HONEY  ['"500000000000000000","50000000000000000","604800"'] ['"500000000000000000","50000000000000000","604800"'] --environment aragon:rinkeby
+=======
+dao new --template hive-template-staging.open.aragonpm.eth --fn prepareInstance --fn-args "Bee Token" BEE "Honey Token" HONEY  ['"500000000000000000","50000000000000000","604800"'] ['"500000000000000000","50000000000000000","604800"'] --environment rinkeby
+>>>>>>> 824ee05f74d65f55238c4b7bd270a317387ec3e8
 ```
 
 <br/>
@@ -59,5 +70,5 @@ dao new --template hive-template --fn prepareInstance --fn-args "BeeToken" BEE "
 this can be run using AragonCli with the following command :
 
 ```sh
-dao new --template hive-template --fn finaliseInstance --fn-args "BeeHive" ['"0x123456789abcdef0123456789abcdef","0xabcdef9876543210abcdef0987654321"'] ['"1000000000000000000","1000000000000000000"'] ['"500000000000000000","50000000000000000","604800"'] --environment aragon:rinkeby
+dao new --template hive-template-staging.open.aragonpm.eth --fn finaliseInstance --fn-args "BeeHive" ['"0x123456789abcdef0123456789abcdef","0xabcdef9876543210abcdef0987654321"'] ['"1000000000000000000","1000000000000000000"'] ['"500000000000000000","50000000000000000","604800"'] --environment rinkeby
 ```
