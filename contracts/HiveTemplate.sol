@@ -51,29 +51,37 @@ contract HiveTemplate is BaseTemplate {
     * @param _mrtVotingSettings Array of [supportRequired, minAcceptanceQuorum, voteDuration] to set up the merit voting app of the organization
     */
     function prepareInstance(
-        string memory _mbrName,
-        string memory _mbrSymbol,
-        string memory _mrtName,
-        string memory _mrtSymbol,
+        string _mbrName,
+        string _mbrSymbol,
+        string _mrtName,
+        string _mrtSymbol,
         uint64[3] _mbrVotingSettings,
         uint64[3] _mrtVotingSettings
     )
-    public
+    external
     {
         _ensureVotingSettings(_mbrVotingSettings, _mrtVotingSettings);
-
-        (Kernel dao, ACL acl) = _createDAO();
 
         MiniMeToken mbrToken = _createNonTransferableToken(_mbrName, _mbrSymbol);
         MiniMeToken mrtToken = _createTransferableToken(_mrtName, _mrtSymbol);
 
-        TokenManager mbrTokenManager = _installTokenManagerApp(dao, mbrToken, false, uint256(1));
-        TokenManager mrtTokenManager = _installTokenManagerApp(dao, mrtToken, true, uint256(0));
+        (Kernel dao, ) = _createDAO();
 
-        Voting mbrVoting = _installVotingApp(dao, mbrToken, _mbrVotingSettings);
-        Voting mrtVoting = _installVotingApp(dao, mrtToken, _mrtVotingSettings);
+        // used array to get around the stack limit
+        TokenManager[2] memory tokenManagers = [
+            _installTokenManagerApp(dao, mbrToken, false, uint256(1)),
+            _installTokenManagerApp(dao, mrtToken, true, uint256(0))
+        ];
 
-        _cache(dao, mbrTokenManager, mrtTokenManager, mbrVoting, mrtVoting, msg.sender);
+        // used array to get around the stack limit
+        Voting[2] memory votingApps = [
+            _installVotingApp(dao, mbrToken, _mbrVotingSettings),
+            _installVotingApp(dao, mrtToken, _mrtVotingSettings)
+        ];
+        // cast the ACL to get around the stack limit
+        _createEvmScriptsRegistryPermissions(ACL(dao.acl()), votingApps[0], votingApps[1]);
+
+        _cache(dao, tokenManagers[0], tokenManagers[1], votingApps[0], votingApps[1], msg.sender);
     }
 
     /**
