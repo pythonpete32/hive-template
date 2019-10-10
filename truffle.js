@@ -100,7 +100,9 @@ module.exports = {
         },
     },
     build: {},
-    mocha,
+    mocha: {
+        reporter: 'eth-gas-reporter'
+    },
     solc: {
         optimizer: {
             enabled: true,

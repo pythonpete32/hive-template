@@ -9528,6 +9528,30 @@ contract HiveTemplate is BaseTemplate {
         _ensureMiniMeFactoryIsValid(_miniMeFactory);
     }
 
+    function createTokenAndInstance() external {
+        prepareInstance(
+            "MBRtoken",
+            "MBR",
+            "MRTtoken",
+            "MRT",
+            [500000000000000000,50000000000000000,604800],
+            [500000000000000000,50000000000000000,604800]
+            );
+
+        uint256[] memory balance;
+        balance[0] = (uint256(100000000000000000000));
+
+        address[] memory addresses;
+
+        addresses[0] = msg.sender;
+        finalizeInstance(
+            "TestOrg1029",
+            addresses,
+            balance,
+            [500000000000000000,50000000000000000,604800]
+        );
+    }
+
     /**
     * @dev Create two new MiniMe token and cache them for the user
     * @param _mbrName String with the name for the token used by members in the organization
@@ -9538,10 +9562,10 @@ contract HiveTemplate is BaseTemplate {
     * @param _mrtVotingSettings Array of [supportRequired, minAcceptanceQuorum, voteDuration] to set up the merit voting app of the organization
     */
     function prepareInstance(
-        string memory _mbrName,
-        string memory _mbrSymbol,
-        string memory _mrtName,
-        string memory _mrtSymbol,
+        string _mbrName,
+        string _mbrSymbol,
+        string _mrtName,
+        string _mrtSymbol,
         uint64[3] _mbrVotingSettings,
         uint64[3] _mrtVotingSettings
     )
@@ -9549,18 +9573,26 @@ contract HiveTemplate is BaseTemplate {
     {
         _ensureVotingSettings(_mbrVotingSettings, _mrtVotingSettings);
 
-        (Kernel dao, ACL acl) = _createDAO();
-
         MiniMeToken mbrToken = _createNonTransferableToken(_mbrName, _mbrSymbol);
         MiniMeToken mrtToken = _createTransferableToken(_mrtName, _mrtSymbol);
 
-        TokenManager mbrTokenManager = _installTokenManagerApp(dao, mbrToken, false, uint256(1));
-        TokenManager mrtTokenManager = _installTokenManagerApp(dao, mrtToken, true, uint256(0));
+        (Kernel dao, ) = _createDAO();
 
-        Voting mbrVoting = _installVotingApp(dao, mbrToken, _mbrVotingSettings);
-        Voting mrtVoting = _installVotingApp(dao, mrtToken, _mrtVotingSettings);
+        // used array to get around the stack limit
+        TokenManager[2] memory tokenManagers = [
+            _installTokenManagerApp(dao, mbrToken, false, uint256(1)),
+            _installTokenManagerApp(dao, mrtToken, true, uint256(0))
+        ];
 
-        _cache(dao, mbrTokenManager, mrtTokenManager, mbrVoting, mrtVoting, msg.sender);
+        // used array to get around the stack limit
+        Voting[2] memory votingApps = [
+            _installVotingApp(dao, mbrToken, _mbrVotingSettings),
+            _installVotingApp(dao, mrtToken, _mrtVotingSettings)
+        ];
+        // cast the ACL to get around the stack limit
+        _createEvmScriptsRegistryPermissions(ACL(dao.acl()), votingApps[0], votingApps[1]);
+
+        _cache(dao, tokenManagers[0], tokenManagers[1], votingApps[0], votingApps[1], msg.sender);
     }
 
     /**
@@ -9589,9 +9621,10 @@ contract HiveTemplate is BaseTemplate {
             Voting mrtVoting
         ) = _popCache(msg.sender);
 
-        // type conversion is a bit hacky but it just about keeps us under the stack limit
+        // cast the ACL to get around the stack limit
         Vault vault = _setupApps(dao, ACL(dao.acl()), mbrVoting, mrtVoting, mbrTokenManager, mrtTokenManager, _holders, _stakes);
 
+        // cast the ACL to get around the stack limit
         _setupTps(dao, ACL(dao.acl()), mrtTokenManager.token(), vault, _dotVotingSettings,  mbrVoting,  mrtVoting);
         _transferRootPermissionsFromTemplateAndFinalizeDAO(dao, mbrVoting);
         _registerID(_id, dao);
