@@ -8,3 +8,5 @@ coverage.json
 coverage
 abi
 .env
+flattened_contracts
+arapp_local.json
