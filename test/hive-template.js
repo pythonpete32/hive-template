@@ -19,7 +19,7 @@ const Kernel = artifacts.require('Kernel')
 const Agent = artifacts.require('Agent')
 const Vault = artifacts.require('Vault')
 const Voting = artifacts.require('Voting')
-const Payroll = artifacts.require('Payroll')
+const HiveTemplate = artifacts.require('HiveTemplate')
 const Finance = artifacts.require('Finance')
 const TokenManager = artifacts.require('TokenManager')
 const MiniMeToken = artifacts.require('MiniMeToken')
@@ -32,7 +32,33 @@ const ONE_WEEK = ONE_DAY * 7
 const THIRTY_DAYS = ONE_DAY * 30
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000'
 
-contract('Hive Dao Template', () => {
+contract('Hive Dao Template', ([_, owner, mbrHolder1, mbrHolder2, mrtHolder1, mrtHolder2, mrtHolder3, someone]) => {
+    let daoID, template, dao, acl, ens
+    let mbrVoting, mrtVoting, mbrTokenManager, mrtTokenManager, mbrToken, mrtToken, finance
+
+    const MBR_HOLDERS = [mbrHolder1, mbrHolder2]
+    const MBR_TOKEN_NAME = 'Member Token'
+    const MBR_TOKEN_SYMBOL = 'MBR'
+
+    const MRT_HOLDERS = [mrtHolder1, mrtHolder2, mrtHolder3]
+    const MRT_STAKES = MRT_HOLDERS.map(() => 1e18)
+    const MRT_TOKEN_NAME = 'Merit Token'
+    const MRT_TOKEN_SYMBOL = 'MRT'
+
+    const MBR_VOTE_DURATION = ONE_WEEK
+    const MBR_SUPPORT_REQUIRED = 50e16
+    const MBR_MIN_ACCEPTANCE_QUORUM = 40e16
+    const MBR_VOTING_SETTINGS = [MBR_SUPPORT_REQUIRED, MBR_MIN_ACCEPTANCE_QUORUM, MBR_VOTE_DURATION]
+
+    const MRT_VOTE_DURATION = ONE_WEEK
+    const MRT_SUPPORT_REQUIRED = 50e16
+    const MRT_MIN_ACCEPTANCE_QUORUM = 5e16
+    const MRT_VOTING_SETTINGS = [MRT_SUPPORT_REQUIRED, MRT_MIN_ACCEPTANCE_QUORUM, MRT_VOTE_DURATION]
+
+    const DOT_VOTE_DURATION = ONE_WEEK
+    const DOT_SUPPORT_REQUIRED = 50e16
+    const DOT_MIN_ACCEPTANCE_QUORUM = 5e16
+    const DOT_VOTING_SETTINGS = [DOT_SUPPORT_REQUIRED, DOT_MIN_ACCEPTANCE_QUORUM, DOT_VOTE_DURATION]
 
     before('fetch hive template and ENS', async () => {
         ens = await getENS()
@@ -50,9 +76,21 @@ contract('Hive Dao Template', () => {
 
         context('when there was no instance prepared before', () => {
             it('reverts when there was no instance prepared before', async () => {
-                // add test
+                await assertRevert(
+                    finalizeInstance(randomId(), MRT_HOLDERS, MRT_STAKES, DOT_VOTING_SETTINGS), 'TEMPLATE_MISSING_CACHE')
             })
         })
+
+        /*
+        context('when there was no instance prepared before', () => {
+            it('should revert when no board members are provided', async () => {
+                await assertRevert(() =>
+                    finalizeInstance(randomId(), MRT_HOLDERS, MRT_STAKES, DOT_VOTING_SETTINGS), 'TEMPLATE_MISSING_CACHE'), {
+                        from: owner,
+                    }
+            })
+        })
+        */
 
         context('when there was an instance already prepared', () => {
             before('prepare instance', async () => {
