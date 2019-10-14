@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 const homedir = require('homedir')
 const path = require('path')
 
