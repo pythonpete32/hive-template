@@ -12,7 +12,7 @@ import { DotVoting } from "./tps/DotVoting.sol";
 
 
 contract HiveTemplate is BaseTemplate {
-    string constant private ERROR_MISSING_TOKEN_CACHE = "TEMPLATE_MISSING_TOKEN_CACHE";
+    string constant private ERROR_MISSING_CACHE = "TEMPLATE_MISSING_CACHE";
     string constant private ERROR_MINIME_FACTORY_NOT_PROVIDED = "TEMPLATE_MINIME_FAC_NOT_PROVIDED";
 
     string constant private ERROR_EMPTY_HOLDERS = "COMPANY_EMPTY_HOLDERS";
@@ -111,7 +111,7 @@ contract HiveTemplate is BaseTemplate {
     /**
     * @dev Deploy a 1Hive DAO using previously cached MiniMe tokens
     * @param _id String with the name for org, will assign `[id].aragonid.eth`
-    * @param _holders Array of token holder addresses
+    * @param _holders Array of MRT token holder addresses
     * @param _stakes Array of merit token stakes for holders (token has 18 decimals, multiply token amount `* 10^18`)
     * @param _dotVotingSettings Array of [_minQuorum, _candidateSupportPct, _voteTime] to set up the dot voting app of the organization
     */
@@ -125,6 +125,7 @@ contract HiveTemplate is BaseTemplate {
         public
     {
         _ensureHolderSettings(_holders, _stakes);
+        _ensureDotVotingSettings(_dotVotingSettings);
 
         (
             Kernel dao,
@@ -158,7 +159,7 @@ contract HiveTemplate is BaseTemplate {
     }
 
     function _popCache(address _owner) internal returns (Kernel, TokenManager, TokenManager, Voting, Voting) {
-        require(cache.owner != address(0), ERROR_MISSING_TOKEN_CACHE);
+        require(cache.owner != address(0), ERROR_MISSING_CACHE);
 
         Kernel dao = cache.dao;
         TokenManager mbrTokenManager = cache.mbrManager;
@@ -360,5 +361,12 @@ contract HiveTemplate is BaseTemplate {
     {
         require(_mbrVotingSettings.length == 3, ERROR_BAD_VOTE_SETTINGS);
         require(_mrtVotingSettings.length == 3, ERROR_BAD_VOTE_SETTINGS);
+    }
+
+    function _ensureDotVotingSettings(
+        uint64[3] memory _dotVotingSettings
+    ) private pure
+    {
+        require(_dotVotingSettings.length == 3, ERROR_BAD_VOTE_SETTINGS);
     }
 }
