@@ -15,9 +15,9 @@ contract HiveTemplate is BaseTemplate {
     string constant private ERROR_MISSING_CACHE = "TEMPLATE_MISSING_CACHE";
     string constant private ERROR_MINIME_FACTORY_NOT_PROVIDED = "TEMPLATE_MINIME_FAC_NOT_PROVIDED";
 
-    string constant private ERROR_EMPTY_HOLDERS = "COMPANY_EMPTY_HOLDERS";
-    string constant private ERROR_BAD_HOLDERS_STAKES_LEN = "COMPANY_BAD_HOLDERS_STAKES_LEN";
-    string constant private ERROR_BAD_VOTE_SETTINGS = "COMPANY_BAD_VOTE_SETTINGS";
+    string constant private ERROR_EMPTY_HOLDERS = "EMPTY_HOLDERS";
+    string constant private ERROR_BAD_HOLDERS_STAKES_LEN = "BAD_HOLDERS_STAKES_LEN";
+    string constant private ERROR_BAD_VOTE_SETTINGS = "BAD_VOTE_SETTINGS";
 
     uint64 constant PCT64 = 10 ** 16;
     address constant ANY_ENTITY = address(-1);

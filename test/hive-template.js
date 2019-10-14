@@ -1,6 +1,5 @@
-/* eslint-disable prettier/prettier */
-/* eslint-disable no-undef */
-/* eslint-disable no-unused-vars */
+/* eslint-disable*/
+
 const encodeCall = require('@aragon/templates-shared/helpers/encodeCall')
 const assertRevert = require('@aragon/templates-shared/helpers/assertRevert')(web3)
 
@@ -63,6 +62,9 @@ contract('Hive Dao Template', ([_, owner, mbrHolder1, mbrHolder2, mrtHolder1, mr
     before('fetch hive template and ENS', async () => {
         ens = await getENS()
         template = HiveTemplate.at(await getTemplateAddress())
+
+        // test if contract is over 24 KiB. im getting out of gas error
+        console.log("  template length: ", template.constructor._json.deployedBytecode.length, "\n");
     })
 
     const finalizeInstance = (...params) => {
@@ -75,31 +77,53 @@ contract('Hive Dao Template', ([_, owner, mbrHolder1, mbrHolder2, mrtHolder1, mr
     context('when the creation fails', () => {
 
         context('when there was no instance prepared before', () => {
-            it('reverts when there was no instance prepared before', async () => {
-                await assertRevert(
-                    finalizeInstance(randomId(), MRT_HOLDERS, MRT_STAKES, DOT_VOTING_SETTINGS), 'TEMPLATE_MISSING_CACHE')
-            })
-        })
-
-        /*
-        context('when there was no instance prepared before', () => {
             it('should revert when no board members are provided', async () => {
                 await assertRevert(() =>
-                    finalizeInstance(randomId(), MRT_HOLDERS, MRT_STAKES, DOT_VOTING_SETTINGS), 'TEMPLATE_MISSING_CACHE'), {
+                    template.finalizeInstance(randomId(), MRT_HOLDERS, MRT_STAKES, DOT_VOTING_SETTINGS), 'TEMPLATE_MISSING_CACHE'), {
                         from: owner,
                     }
             })
         })
-        */
+
+        context('preparing instance', () => {
+            it('should revert when no member voting settings are provided', async () => {
+                await assertRevert(() =>
+                    template.prepareInstance(MBR_TOKEN_NAME, MBR_TOKEN_SYMBOL, MRT_TOKEN_NAME, MRT_TOKEN_SYMBOL, [], MRT_VOTING_SETTINGS, {
+                        from: owner,
+                    })
+                )
+            })
+
+            it('should revert when no merit voting settings are provided', async () => {
+                await assertRevert(() =>
+                    template.prepareInstance(MBR_TOKEN_NAME, MBR_TOKEN_SYMBOL, MRT_TOKEN_NAME, MRT_TOKEN_SYMBOL, MBR_VOTING_SETTINGS, [], {
+                        from: owner,
+                    })
+                )
+            })
+        })
+
 
         context('when there was an instance already prepared', () => {
             before('prepare instance', async () => {
-                // add test
+                await template.prepareInstance(MBR_TOKEN_NAME, MBR_TOKEN_SYMBOL, MRT_TOKEN_NAME, MRT_TOKEN_SYMBOL, MBR_VOTING_SETTINGS, MRT_VOTING_SETTINGS)
             })
 
-            it('reverts when no share members were given', async () => {
-                // add test
+            it('should revert when no board members are provided', async () => {
+                await assertRevert(() =>
+                    template.prepareInstance(BOARD_TOKEN_NAME, BOARD_TOKEN_SYMBOL, [], BOARD_VOTING_SETTINGS, FINANCE_PERIOD, {
+                        from: owner,
+                    })
+                )
             })
+
+            it('reverts when no MRT holders were given', async () => {
+                await assertRevert(() =>
+                    template.finalizeInstance(randomId(), [], MRT_STAKES, DOT_VOTING_SETTINGS), 'EMPTY_HOLDERS'), {
+                        from: owner,
+                    }
+            })
+
 
             it('reverts when number of shared members and stakes do not match', async () => {
                 // add test

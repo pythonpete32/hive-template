@@ -1,4 +1,5 @@
 node_modules
+flattened_contracts
 build
 .cache
 dist
@@ -8,5 +9,4 @@ coverage.json
 coverage
 abi
 .env
-flattened_contracts
 arapp_local.json
