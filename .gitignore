@@ -1,6 +1,7 @@
 node_modules
 flattened_contracts
 build
+artifacts
 .cache
 dist
 ipfs.cmd
