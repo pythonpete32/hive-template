@@ -1,15 +1,15 @@
 /* eslint-disable*/
 
 const encodeCall = require('@aragon/templates-shared/helpers/encodeCall')
-const assertRevert = require('@aragon/templates-shared/helpers/assertRevert')(web3)
+const assertRevert = require('@aragon/templates-shared/helpers/assertRevert')(pweb3)
 
 const { hash: namehash } = require('eth-ens-namehash')
 const { APP_IDS } = require('@aragon/templates-shared/helpers/apps')
 const { randomId } = require('@aragon/templates-shared/helpers/aragonId')
 const { getEventArgument } = require('@aragon/test-helpers/events')
-const { getENS, getTemplateAddress } = require('@aragon/templates-shared/lib/ens')(web3, artifacts)
+const { getENS, getTemplateAddress } = require('@aragon/templates-shared/lib/ens')(pweb3, artifacts)
 const { getInstalledAppsById } = require('@aragon/templates-shared/helpers/events')(artifacts)
-const { assertRole, assertMissingRole, assertRoleNotGranted } = require('@aragon/templates-shared/helpers/assertRole')(web3)
+const { assertRole, assertMissingRole, assertRoleNotGranted } = require('@aragon/templates-shared/helpers/assertRole')(pweb3)
 
 const CompanyTemplate = artifacts.require('HiveTemplate')
 
