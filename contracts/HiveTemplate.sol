@@ -14,24 +14,43 @@ import { DotVoting } from "./tps/DotVoting.sol";
 contract HiveTemplate is BaseTemplate {
     string constant private ERROR_MISSING_CACHE = "TEMPLATE_MISSING_CACHE";
     string constant private ERROR_MINIME_FACTORY_NOT_PROVIDED = "TEMPLATE_MINIME_FAC_NOT_PROVIDED";
-
     string constant private ERROR_EMPTY_HOLDERS = "EMPTY_HOLDERS";
     string constant private ERROR_BAD_HOLDERS_STAKES_LEN = "BAD_HOLDERS_STAKES_LEN";
     string constant private ERROR_BAD_VOTE_SETTINGS = "BAD_VOTE_SETTINGS";
+    string constant private ERROR_BAD_MEMBER_SETTINGS = "MEMBERS_CANNOT_BE_0";
+
+
+    //TODO: change for rinkeby
+    bytes32 constant internal ADDRESS_BOOK_APP_ID = apmNamehash("address-book");              // address-book.aragonpm.eth
+    bytes32 constant internal ALLOCATIONS_APP_ID = apmNamehash("allocations");              // allocations.aragonpm.eth;
+    bytes32 constant internal DOT_VOTING_APP_ID = apmNamehash("dot-voting");            // dot-voting.aragonpm.eth;
+    bytes32 constant internal REWARDS_APP_ID = apmNamehash("rewards");              // rewards.aragonpm.eth;
+
+    uint64 constant private DEFAULT_FINANCE_PERIOD = uint64(30 days);
+    uint64 constant private DEFAULT_ALLOCATIONS_PERIOD = uint64(30 days);
+
+    bool private constant MERIT_TRANSFERABLE = true;
+    uint8 private constant MERIT_TOKEN_DECIMALS = uint8(18);
+    uint256 private constant MERIT_MAX_PER_ACCOUNT = uint256(0);
 
     uint64 constant PCT64 = 10 ** 16;
     address constant ANY_ENTITY = address(-1);
 
     struct Cache {
-        address owner;
-        Kernel dao;
-        TokenManager mbrManager;
-        TokenManager mrtManager;
-        Voting mbrVoting;
-        Voting mrtVoting;
+        address dao;
+        address mbrTokenManager;
+        address mrtTokenManager;
+        address mbrVoting;
+        address mrtVoting;
+        address addressBook;
+        address vault;
+        address allocationsVault;
+        address allocations;
+        address dotVoting;
+        address finance;
     }
 
-    Cache cache;
+    mapping (address => Cache) private cache;
 
     constructor(DAOFactory _daoFactory, ENS _ens, MiniMeTokenFactory _miniMeFactory, IFIFSResolvingRegistrar _aragonID)
         BaseTemplate(_daoFactory, _ens, _miniMeFactory, _aragonID)
@@ -41,332 +60,389 @@ contract HiveTemplate is BaseTemplate {
         _ensureMiniMeFactoryIsValid(_miniMeFactory);
     }
 
-    function createTokenAndInstance() external {
-        prepareInstance(
-            "MBRtoken",
-            "MBR",
-            "MRTtoken",
-            "MRT",
-            [500000000000000000,50000000000000000,604800],
-            [500000000000000000,50000000000000000,604800]
-            );
+    // ------------------------------------- EXTERNAL FUNCTIONS ------------------------------------- //
 
-        uint256[] memory balance;
-        balance[0] = (uint256(100000000000000000000));
-
-        address[] memory addresses;
-
-        addresses[0] = msg.sender;
-        finalizeInstance(
-            "TestOrg1029",
-            addresses,
-            balance,
-            [500000000000000000,50000000000000000,604800]
-        );
-    }
-
-    /**
-    * @dev Create two new MiniMe token and cache them for the user
-    * @param _mbrName String with the name for the token used by members in the organization
-    * @param _mbrSymbol String with the symbol for the token used by members in the organization
-    * @param _mbrName String with the name for the token used for merit in the organization
-    * @param _mbrSymbol String with the symbol for the token used for metit in the organization
-    * @param _mbrVotingSettings Array of [supportRequired, minAcceptanceQuorum, voteDuration] to set up the member voting app of the organization
-    * @param _mrtVotingSettings Array of [supportRequired, minAcceptanceQuorum, voteDuration] to set up the merit voting app of the organization
-    */
     function prepareInstance(
-        string _mbrName,
-        string _mbrSymbol,
-        string _mrtName,
-        string _mrtSymbol,
-        uint64[3] _mbrVotingSettings,
-        uint64[3] _mrtVotingSettings
+        string    _memberTokenName,
+        string    _memberTokenSymbol,
+        address[] _members,
+        uint64[3] _memberVotingSettings,
+        uint64    _financePeriod
     )
-    public
+        external
     {
-        _ensureVotingSettings(_mbrVotingSettings, _mrtVotingSettings);
+        _ensureHoldersNotZero(_members);
+        _ensureVotingSettings(_memberVotingSettings);
 
-        MiniMeToken mbrToken = _createNonTransferableToken(_mbrName, _mbrSymbol);
-        MiniMeToken mrtToken = _createTransferableToken(_mrtName, _mrtSymbol);
-
-        (Kernel dao, ) = _createDAO();
-
-        // used array to get around the stack limit
-        TokenManager[2] memory tokenManagers = [
-            _installTokenManagerApp(dao, mbrToken, false, uint256(1)),
-            _installTokenManagerApp(dao, mrtToken, true, uint256(0))
-        ];
-
-        // used array to get around the stack limit
-        Voting[2] memory votingApps = [
-            _installVotingApp(dao, mbrToken, _mbrVotingSettings),
-            _installVotingApp(dao, mrtToken, _mrtVotingSettings)
-        ];
-        // cast the ACL to get around the stack limit
-        _createEvmScriptsRegistryPermissions(ACL(dao.acl()), votingApps[0], votingApps[1]);
-
-        _cache(dao, tokenManagers[0], tokenManagers[1], votingApps[0], votingApps[1], msg.sender);
+        // deploy DAO
+        (Kernel dao, ACL acl) = _createDAO();
+        // deploy member token
+        MiniMeToken memberToken = _createToken(_memberTokenName, _memberTokenSymbol, uint8(0));
+        // install member apps
+        TokenManager memberTokenManager = _installMemberApps(dao, memberToken, _memberVotingSettings, _financePeriod);
+        // mint member tokens
+        _mintTokens(acl, memberTokenManager, _members, 1);
+        // cache DAO
+        _cacheDao(dao);
     }
 
-    /**
-    * @dev Deploy a 1Hive DAO using previously cached MiniMe tokens
-    * @param _id String with the name for org, will assign `[id].aragonid.eth`
-    * @param _holders Array of MRT token holder addresses
-    * @param _stakes Array of merit token stakes for holders (token has 18 decimals, multiply token amount `* 10^18`)
-    * @param _dotVotingSettings Array of [_minQuorum, _candidateSupportPct, _voteTime] to set up the dot voting app of the organization
-    */
-
-    function finalizeInstance(
-        string memory _id,
-        address[] memory _holders,
-        uint256[] memory _stakes,
+    function setupApps(
+        string _meritTokenName,
+        string _meritTokenSymbol,
+        uint64 _allocationPeriod,
+        uint64[3] _meritVotingSettings,
         uint64[3] _dotVotingSettings
     )
-        public
+        external
     {
-        _ensureHolderSettings(_holders, _stakes);
-        _ensureDotVotingSettings(_dotVotingSettings);
+        _ensureVotingSettings(_meritVotingSettings, _dotVotingSettings);
+        _ensureMemberAppsCache();
 
-        (
-            Kernel dao,
-            TokenManager mbrTokenManager,
-            TokenManager mrtTokenManager,
-            Voting mbrVoting,
-            Voting mrtVoting
-        ) = _popCache(msg.sender);
+        Kernel dao = _daoCache();
+        // deploy Merit token
+        MiniMeToken meritToken = _createToken(_meritTokenName, _meritTokenSymbol, MERIT_TOKEN_DECIMALS);
+        // install Merit apps
+        _installMeritApps(dao, meritToken, _allocationPeriod, _meritVotingSettings, _dotVotingSettings);
 
-        // cast the ACL to get around the stack limit
-        Vault vault = _setupApps(dao, ACL(dao.acl()), mbrVoting, mrtVoting, mbrTokenManager, mrtTokenManager, _holders, _stakes);
-
-        // cast the ACL to get around the stack limit
-        _setupTps(dao, ACL(dao.acl()), mrtTokenManager.token(), vault, _dotVotingSettings,  mbrVoting,  mrtVoting);
-        _transferRootPermissionsFromTemplateAndFinalizeDAO(dao, mbrVoting);
-        _registerID(_id, dao);
+        _setupMemberPermissions(dao);
     }
 
-    // --------------------------- Internal Functions ---------------------------
-    function _cache(
-        Kernel _dao,
-        TokenManager _mbrTokenManager,
-        TokenManager _mrtTokenManager,
-        Voting _mbrVoting,
-        Voting _mrtVoting,
-        address _owner
-    )
-    internal
+    // TODO: probably dont need to make this a separate tx, will fit into the stack limit but not sure about gas
+    function finalizeInstance(string _id) external {
+
+        _ensureMeritAppsCache();
+
+        Kernel dao = _daoCache();
+        ACL acl = ACL(dao.acl());
+        (,Voting memberVoting, , ,) = _memberAppsCache();
+
+        // setup merit apps permissions
+        _setupMeritPermissions(dao);
+        // setup EVM script registry permissions
+        _createEvmScriptsRegistryPermissions(acl, memberVoting, memberVoting);
+        // clear DAO permissions
+        _transferRootPermissionsFromTemplateAndFinalizeDAO(dao, memberVoting, memberVoting);
+        // register id
+        _registerID(_id, address(dao));
+        // clear cache
+        _clearCache();
+    }
+
+    // ------------------------------------- INTERNAL FUNCTIONS ------------------------------------- //
+
+    // ######################
+    // #     Setup Steps    #
+    // ######################
+
+    function _installMemberApps(Kernel _dao, MiniMeToken _token, uint64[3] _votingSettings, uint64 _financePeriod)
+        internal
+        returns (TokenManager)
     {
-        cache = Cache(_owner, _dao, _mbrTokenManager, _mrtTokenManager, _mbrVoting, _mrtVoting);
+        TokenManager memberTokenManager = _installTokenManagerApp(_dao, _token, false, uint256(1));
+        Voting voting = _installVotingApp(_dao, _token, _votingSettings);
+        Vault mainVault = _installVaultApp(_dao);
+        Finance finance = _installFinanceApp(_dao, mainVault, _financePeriod == 0 ? DEFAULT_FINANCE_PERIOD : _financePeriod);
+        AddressBook addressBook = _installAddressBookApp(_dao);
+
+        _cacheMemberApps(memberTokenManager, voting, mainVault, finance, addressBook);
+
+        return memberTokenManager;
     }
 
-    function _popCache(address _owner) internal returns (Kernel, TokenManager, TokenManager, Voting, Voting) {
-        require(cache.owner != address(0), ERROR_MISSING_CACHE);
+    // TODO: add Rrojects
+    function _installMeritApps(
+        Kernel           _dao,
+        MiniMeToken      _token,
+        uint64           _period,
+        uint64[3] memory _votingSettings,
+        uint64[3] memory _dotVotingSettings
 
-        Kernel dao = cache.dao;
-        TokenManager mbrTokenManager = cache.mbrManager;
-        TokenManager mrtTokenManager = cache.mrtManager;
-        Voting mbrVoting = cache.mbrVoting;
-        Voting mrtVoting = cache.mrtVoting;
-
-        delete cache.mbrManager;
-        delete cache.mrtManager;
-        delete cache.owner;
-        delete cache.mbrVoting;
-        delete cache.mrtVoting;
-
-        return (dao, mbrTokenManager, mrtTokenManager, mbrVoting, mrtVoting);
-    }
-
-    // ***** i didn't use createToken from basetemplate because i coudnt set transferability *****
-    function _createTransferableToken(string memory _name, string memory _symbol) internal returns (MiniMeToken) {
-        require(address(miniMeFactory) != address(0), ERROR_MINIME_FACTORY_NOT_PROVIDED);
-        MiniMeToken token = miniMeFactory.createCloneToken(MiniMeToken(address(0)), 0, _name, 18, _symbol, true);
-        emit DeployToken(address(token));
-        return token;
-    }
-
-    // ***** i didn't use createToken from basetemplate because i coudnt set transferability *****
-    function _createNonTransferableToken(string memory _name, string memory _symbol) internal returns (MiniMeToken) {
-        require(address(miniMeFactory) != address(0), ERROR_MINIME_FACTORY_NOT_PROVIDED);
-        MiniMeToken token = miniMeFactory.createCloneToken(MiniMeToken(address(0)), 0, _name, 0, _symbol, false);
-        emit DeployToken(address(token));
-        return token;
-    }
-
-    function _setupApps(
-        Kernel _dao,
-        ACL _acl,
-        Voting _mbrVoting,
-        Voting _mrtVoting,
-        TokenManager _mbrTokenManager,
-        TokenManager _mrtTokenManager,
-        address[] memory _holders,
-        uint256[] memory _stakes
     )
         internal
-        returns (Vault)
+        returns (TokenManager)
     {
-        Vault vault = _installVaultApp(_dao);
+        TokenManager meritTokenManager = _installTokenManagerApp(_dao, _token, true, uint256(18));
+        Voting meritVoting = _installVotingApp(_dao, _token, _votingSettings);
+        Vault allocationsVault = _installVaultApp(_dao);
+        Allocations allocations = _installAllocationsApp(_dao, allocationsVault, _period == 0 ? DEFAULT_ALLOCATIONS_PERIOD : _period);
+        DotVoting dotVoting = _installDotVotingApp(_dao, _token, _dotVotingSettings);
 
-        _mintTokens(_acl, _mbrTokenManager, _holders, _stakes);
-        _mintTokens(_acl, _mrtTokenManager, _holders, _stakes);
+        _cacheMeritApps(meritTokenManager, meritVoting, allocationsVault, allocations, dotVoting);
 
-        _setupPermissions(_acl, vault, _mbrVoting, _mrtVoting, _mbrTokenManager, _mrtTokenManager);
-
-        return (vault);
     }
 
-    function _setupTps(
-        Kernel _dao,
+    // ######################
+    // #  Setup Permissions #
+    // ######################
+
+    // TODO: none of these permissions are correct as per the canonical 1Hive DAO
+    function _setupMemberPermissions(Kernel _dao) internal {
+        ACL acl = ACL(_dao.acl());
+
+        (TokenManager memberTokenManager,
+        Voting        memberVoting,
+        Vault         vault,
+        Finance       finance,
+        AddressBook   addressBook) = _memberAppsCache();
+
+        // token manager
+        _createTokenManagerPermissions(acl, memberTokenManager, memberVoting, memberVoting);
+        // voting
+        _createVotingPermissions(acl, memberVoting, memberVoting, memberTokenManager, memberVoting);
+        // vault
+        _createVaultPermissions(acl, vault, finance, memberVoting);
+        // finance
+        _createFinancePermissions(acl, finance, memberVoting, memberVoting);
+        _createFinanceCreatePaymentsPermission(acl, finance, memberVoting, memberVoting);
+        // address book
+        _createAddressBookPermissions(acl, addressBook, memberVoting, memberVoting);
+    }
+
+    // TODO: none of these permissions are correct as per the canonical 1Hive DAO
+    function _setupMeritPermissions(Kernel _dao) internal {
+        ACL acl = ACL(_dao.acl());
+
+        (TokenManager meritTokenManager,
+        Voting        meritVoting,
+        Vault         allocationsVault,
+        Allocations   allocations,
+        DotVoting     dotVoting) = _meritAppsCache();
+
+        (,Voting memberVoting, , , ) = _memberAppsCache();
+
+        // token manager
+        _createTokenManagerPermissions(acl, meritTokenManager, meritVoting, memberVoting);
+        // voting
+        _createVotingPermissions(acl, meritVoting, meritVoting, meritTokenManager, memberVoting);
+        // vault
+        //_createVaultPermissions(_acl, _vault, _grantee, _manager);
+        // allocations
+        _createAllocationsPermissions(acl, allocations, dotVoting, memberVoting, memberVoting);
+        // dot voting
+        _createDotVotingPermissions(acl, dotVoting, memberVoting, memberVoting);
+    }
+
+    // ######################
+    // #     App Helpers    #
+    // ######################
+
+    // *** ADDRESS BOOK ***
+    function _installAddressBookApp(Kernel _dao) internal returns (AddressBook) {
+        bytes memory initializeData = abi.encodeWithSelector(AddressBook(0).initialize.selector);
+        return AddressBook(_installNonDefaultApp(_dao, ADDRESS_BOOK_APP_ID, initializeData));
+    }
+
+    function _createAddressBookPermissions(ACL _acl, AddressBook _addressBook, address _grantee, address _manager) internal {
+        _acl.createPermission(_grantee, _addressBook, _addressBook.ADD_ENTRY_ROLE(), _manager);
+        _acl.createPermission(_grantee, _addressBook, _addressBook.REMOVE_ENTRY_ROLE(), _manager);
+        _acl.createPermission(_grantee, _addressBook, _addressBook.UPDATE_ENTRY_ROLE(), _manager);
+    }
+
+    // *** ALLOCATIONS ***
+    function _installAllocationsApp(Kernel _dao, Vault _vault, uint64 _periodDuration) internal returns (Allocations) {
+        bytes memory initializeData = abi.encodeWithSelector(Allocations(0).initialize.selector, _vault, _periodDuration);
+        return Allocations(_installNonDefaultApp(_dao, ALLOCATIONS_APP_ID, initializeData));
+    }
+
+    function _createAllocationsPermissions(
         ACL _acl,
-        MiniMeToken _mrtToken,
+        Allocations _allocations,
+        address _createAllocationsGrantee,
+        address _createAccountsGrantee,
+        address _manager
+    )
+        internal
+    {
+        _acl.createPermission(_createAccountsGrantee, _allocations, _allocations.CREATE_ACCOUNT_ROLE(), _manager);
+        _acl.createPermission(_createAccountsGrantee, _allocations, _allocations.CHANGE_BUDGETS_ROLE(), _manager);
+        _acl.createPermission(_createAllocationsGrantee, _allocations, _allocations.CREATE_ALLOCATION_ROLE(), _manager);
+        _acl.createPermission(ANY_ENTITY, _allocations, _allocations.EXECUTE_ALLOCATION_ROLE(), _manager);
+        _acl.createPermission(ANY_ENTITY, _allocations, _allocations.EXECUTE_PAYOUT_ROLE(), _manager);
+    }
+
+    // *** DOT VOTING ***
+
+    // _dotVotingSettings Array of [minQuorum, candidateSupportPct, voteDuration] to set up the dot voting app of the organization
+    function _installDotVotingApp(Kernel _dao, MiniMeToken _token, uint64[3] memory _dotVotingSettings) internal returns (DotVoting) {
+        return _installDotVotingApp(_dao, _token, _dotVotingSettings[0], _dotVotingSettings[1], _dotVotingSettings[2]);
+    }
+
+    function _installDotVotingApp(
+        Kernel _dao,
+        MiniMeToken _token,
+        uint64 _quorum,
+        uint64 _support,
+        uint64 _duration
+    )
+        internal returns (DotVoting)
+    {
+        bytes memory initializeData = abi.encodeWithSelector(DotVoting(0).initialize.selector, _token, _quorum, _support, _duration);
+        return DotVoting(_installNonDefaultApp(_dao, DOT_VOTING_APP_ID, initializeData));
+    }
+
+    function _createDotVotingPermissions(
+        ACL _acl,
+        DotVoting _dotVoting,
+        address _grantee,
+        address _manager
+    )
+        internal
+    {
+        //TODO: we should pass _tokenManager into ROLE_CREATE_VOTES as 2nd param, not _dotVoting
+        _acl.createPermission(_grantee, _dotVoting, _dotVoting.ROLE_CREATE_VOTES(), _manager);
+        _acl.createPermission(_grantee, _dotVoting, _dotVoting.ROLE_ADD_CANDIDATES(), _manager);
+    }
+
+    // ######################
+    // #       Caching      #
+    // ######################
+
+    // *** DAO ***
+    function _cacheDao(Kernel _dao) internal {
+        Cache storage c = cache[msg.sender];
+
+        c.dao = address(_dao);
+    }
+
+    function _daoCache() internal returns (Kernel dao) {
+        Cache storage c = cache[msg.sender];
+
+        dao = Kernel(c.dao);
+    }
+
+    // *** MEMBER APPS ***
+    function _cacheMemberApps(
+        TokenManager _memberTokenManager,
+        Voting _memberVoting,
         Vault _vault,
-        uint64[3] _dotVotingSettings,
-        Voting _mbrVoting,
-        Voting _mrtVoting
+        Finance _finance,
+        AddressBook _addressBook
+    ) internal
+    {
+        Cache storage c = cache[msg.sender];
+
+        c.mbrTokenManager = address(_memberTokenManager);
+        c.mbrVoting = address(_memberVoting);
+        c.vault = address(_vault);
+        c.finance = address(_finance);
+        c.addressBook = address(_addressBook);
+    }
+
+    function _memberAppsCache() internal returns (
+        TokenManager memberTokenManager,
+        Voting memberVoting,
+        Vault vault,
+        Finance finance,
+        AddressBook addressBook
     )
-        internal
     {
-        AddressBook addressBook = _installAddressBook(_dao);
-        DotVoting dotVoting = _installDotVoting(_dao, _mrtToken, _dotVotingSettings);
-        Allocations allocations = _installAllocations(_dao, addressBook, _vault);
-        Rewards rewards = _installRewards(_dao, _vault);
+        Cache storage c = cache[msg.sender];
 
-        _setupTpsPermissions(_acl, addressBook, dotVoting, allocations, rewards, _mbrVoting, _mrtVoting);
+        memberTokenManager = TokenManager(c.mbrTokenManager);
+        memberVoting = Voting(c.mbrVoting);
+        vault = Vault(c.vault);
+        finance = Finance(c.finance);
+        addressBook = AddressBook(c.addressBook);
     }
 
-    function _installDotVoting (
-        Kernel _dao,
-        MiniMeToken _mrtToken,
-        uint64[3] _dotVotingSettings
-    ) internal returns (DotVoting)
+    // *** MERIT APPS ***
+    function _cacheMeritApps(
+        TokenManager _meritTokenManager,
+        Voting _meritVoting,
+        Vault _allocationsVault,
+        Allocations _allocations,
+        DotVoting _dotVoting
+    ) internal
     {
-        bytes32 dotVotingAppId = keccak256(abi.encodePacked(apmNamehash("open"), keccak256("dot-voting-preview")));
+        Cache storage c = cache[msg.sender];
 
-        DotVoting dotVoting = DotVoting(
-            _dao.newAppInstance(dotVotingAppId, _latestVersionAppBase(dotVotingAppId))
-        );
-
-        dotVoting.initialize(_mrtToken, _dotVotingSettings[0], _dotVotingSettings[1], _dotVotingSettings[2]);
-        return dotVoting;
+        c.mrtTokenManager = address(_meritTokenManager);
+        c.mrtVoting = address(_meritVoting);
+        c.allocationsVault = address(_allocationsVault);
+        c.allocations = address(_allocations);
+        c.dotVoting = address(_dotVoting);
     }
 
-    function _installAddressBook (Kernel _dao) internal returns (AddressBook) {
-        bytes32 addressBookAppId = keccak256(abi.encodePacked(apmNamehash("open"), keccak256("address-book-preview")));
-
-        AddressBook addressBook = AddressBook(
-            _dao.newAppInstance(addressBookAppId, _latestVersionAppBase(addressBookAppId))
-        );
-
-        addressBook.initialize();
-        return addressBook;
-    }
-
-    function _installAllocations (Kernel _dao, AddressBook _addressBook, Vault _vault ) internal returns (Allocations) {
-        bytes32 allocationsAppId = keccak256(abi.encodePacked(apmNamehash("open"), keccak256("allocations-preview")));
-
-        Allocations allocations = Allocations(
-            _dao.newAppInstance(allocationsAppId, _latestVersionAppBase(allocationsAppId))
-        );
-
-        allocations.initialize(_addressBook, _vault);
-        return allocations;
-    }
-
-    function _installRewards(Kernel _dao, Vault _vault) internal returns (Rewards) {
-        bytes32 rewardsAppId = keccak256(abi.encodePacked(apmNamehash("open"), keccak256("rewards-preview")));
-
-        Rewards rewards = Rewards(
-            _dao.newAppInstance(rewardsAppId, _latestVersionAppBase(rewardsAppId))
-        );
-
-        rewards.initialize(_vault);
-        return rewards;
-    }
-
-    function _setupTpsPermissions(
-        ACL acl,
-        AddressBook addressBook,
-        DotVoting dotVoting,
+    function _meritAppsCache() internal returns(
+        TokenManager meritTokenManager,
+        Voting meritVoting,
+        Vault allocationsVault,
         Allocations allocations,
-        Rewards rewards,
-        Voting mbrVoting,
-        Voting mrtVoting
+        DotVoting dotVoting
     )
-        internal
     {
-        acl.createPermission(mbrVoting, addressBook, addressBook.ADD_ENTRY_ROLE(), mbrVoting);
-        acl.createPermission(mbrVoting, addressBook, addressBook.REMOVE_ENTRY_ROLE(), mbrVoting);
-        emit InstalledApp(addressBook, keccak256(abi.encodePacked(apmNamehash("open"), keccak256("address-book-preview"))));
+        Cache storage c = cache[msg.sender];
 
-
-        /**  Projects permissions: <-- add these after i include projects app
-        acl.createPermission(voting, projects, projects.FUND_ISSUES_ROLE(), voting);
-        acl.createPermission(voting, projects, projects.ADD_REPO_ROLE(), voting);
-        acl.createPermission(voting, projects, projects.CHANGE_SETTINGS_ROLE(), voting);
-        acl.createPermission(dotVoting, projects, projects.CURATE_ISSUES_ROLE(), voting);
-        acl.createPermission(voting, projects, projects.REMOVE_REPO_ROLE(), voting);
-        acl.createPermission(voting, projects, projects.REVIEW_APPLICATION_ROLE(), voting);
-        acl.createPermission(voting, projects, projects.WORK_REVIEW_ROLE(), voting);
-        emit InstalledApp(projects, planningAppIds[uint8(PlanningApps.Projects)]);
-        */
-
-        // Dot-voting permissions
-        acl.createPermission(ANY_ENTITY, dotVoting, dotVoting.ROLE_CREATE_VOTES(), mbrVoting);
-        acl.createPermission(ANY_ENTITY, dotVoting, dotVoting.ROLE_ADD_CANDIDATES(), mbrVoting);
-        emit InstalledApp(dotVoting, keccak256(abi.encodePacked(apmNamehash("open"), keccak256("dot-voting-preview"))));
-
-        // Allocations permissions:
-        acl.createPermission(mbrVoting, allocations, allocations.CREATE_ACCOUNT_ROLE(), mbrVoting);
-        acl.createPermission(dotVoting, allocations, allocations.CREATE_ALLOCATION_ROLE(), mbrVoting);
-        acl.createPermission(ANY_ENTITY, allocations, allocations.EXECUTE_ALLOCATION_ROLE(), mbrVoting);
-        emit InstalledApp(allocations, keccak256(abi.encodePacked(apmNamehash("open"), keccak256("allocations-preview"))));
-
-        // Rewards permissions:
-        acl.createPermission(mbrVoting, rewards, rewards.ADD_REWARD_ROLE(), mbrVoting);
-        emit InstalledApp(rewards, keccak256(abi.encodePacked(apmNamehash("open"), keccak256("rewards-preview"))));
+        meritTokenManager = TokenManager(c.mrtTokenManager);
+        meritVoting = Voting(c.mrtVoting);
+        allocationsVault = Vault(c.allocationsVault);
+        allocations = Allocations(c.allocations);
+        dotVoting = DotVoting(c.dotVoting);
     }
 
-    function _setupPermissions(
-        ACL _acl,
-        Vault _vault,
-        Voting _mbrVoting,
-        Voting _mrtVoting,
-        TokenManager _mbrTokenManager,
-        TokenManager _mrtTokenManager
-    )
-        internal
-    {
+    // *** CLEAR CACHE ***
+    function _clearCache() internal {
+        Cache storage c = cache[msg.sender];
 
-        _createVaultPermissions(_acl, _vault, _mbrVoting, _mbrVoting);
-        _createVotingPermissions(_acl, _mbrVoting, _mbrVoting, _mbrTokenManager, _mbrVoting);
-        _createVotingPermissions(_acl, _mrtVoting, _mrtVoting, _mrtTokenManager, _mbrVoting);
-        _createEvmScriptsRegistryPermissions(_acl, _mbrVoting, _mbrVoting);
-        _createTokenManagerPermissions(_acl, _mbrTokenManager, _mbrVoting, _mbrVoting);
-        _createTokenManagerPermissions(_acl, _mrtTokenManager, _mrtVoting, _mbrVoting);
+        delete c.dao;
+        delete c.mbrTokenManager;
+        delete c.mrtTokenManager;
+        delete c.mbrVoting;
+        delete c.mrtVoting;
+        delete c.addressBook;
+        delete c.vault;
+        delete c.allocationsVault;
+        delete c.allocations;
+        delete c.dotVoting;
+        delete c.finance;
     }
 
-    function _ensureHolderSettings(
-        address[] memory _holders,
-        uint256[] memory _stakes
-    ) private pure
-    {
+    // ######################
+    // #      Modifiers     #
+    // ######################
+
+    function _ensureHolderSettings(address[] memory _holders, uint256[] memory _stakes) private pure {
         require(_holders.length > 0, ERROR_EMPTY_HOLDERS);
         require(_holders.length == _stakes.length, ERROR_BAD_HOLDERS_STAKES_LEN);
     }
 
-    function _ensureVotingSettings(
-        uint64[3] memory _mbrVotingSettings,
-        uint64[3] memory _mrtVotingSettings
-    ) private pure
-    {
-        require(_mbrVotingSettings.length == 3, ERROR_BAD_VOTE_SETTINGS);
-        require(_mrtVotingSettings.length == 3, ERROR_BAD_VOTE_SETTINGS);
+    function _ensureVotingSettings( uint64[3] memory _votingSettings1, uint64[3] memory _votingSettings2) private pure {
+        require(_votingSettings1.length == 3, ERROR_BAD_VOTE_SETTINGS);
+        require(_votingSettings2.length == 3, ERROR_BAD_VOTE_SETTINGS);
     }
 
-    function _ensureDotVotingSettings(
-        uint64[3] memory _dotVotingSettings
-    ) private pure
-    {
-        require(_dotVotingSettings.length == 3, ERROR_BAD_VOTE_SETTINGS);
+    function _ensureVotingSettings(uint64[3] memory _votingSettings) private pure {
+        require(_votingSettings.length == 3, ERROR_BAD_VOTE_SETTINGS);
+    }
+
+    function _ensureHoldersNotZero(address[] _holders) private pure {
+        require(_holders.length > 0, ERROR_EMPTY_HOLDERS);
+    }
+
+    function _ensureMemberAppsCache() private view {
+        Cache storage c = cache[msg.sender];
+
+        require(
+            c.mbrTokenManager != address(0) &&
+            c.mbrVoting != address(0) &&
+            c.vault != address(0) &&
+            c.finance != address(0) &&
+            c.addressBook != address(0),
+
+            ERROR_MISSING_CACHE
+        );
+    }
+
+    function _ensureMeritAppsCache() private view {
+        Cache storage c = cache[msg.sender];
+        require(
+            c.mrtTokenManager != address(0) &&
+            c.mrtVoting != address(0) &&
+            c.allocationsVault != address(0) &&
+            c.allocations != address(0) &&
+            c.dotVoting != address(0),
+
+            ERROR_MISSING_CACHE
+        );
     }
 }
