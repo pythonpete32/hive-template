@@ -426,7 +426,7 @@ contract HiveTemplate is BaseTemplate {
 
     function _ensureMemberAppsCache() private view {
         Cache storage c = cache[msg.sender];
-
+gfg
         require(
             c.mbrTokenManager != address(0) &&
             c.mbrVoting != address(0) &&

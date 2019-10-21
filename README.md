@@ -42,6 +42,15 @@ this can be run using AragonCli with the following command :
 ```sh
 dao new --template hive-template-staging.open.aragonpm.eth --fn prepareInstance --fn-args "BeeToken" BEE "HoneyToken" HONEY  ['"500000000000000000","50000000000000000","604800"'] ['"500000000000000000","50000000000000000","604800"'] --environment rinkeby
 ```
+```sh
+dao new --template hive-template-staging.open.aragonpm.eth --fn prepareInstance --fn-args "BeeToken" BEE ['"0x75B98710D5995AB9992F02492B7568b43133161D"']  ['"500000000000000000","50000000000000000","604800"'] 0
+```
+
+        string    _memberTokenName,
+        string    _memberTokenSymbol,
+        address[] _members,
+        uint64[3] _memberVotingSettings,
+        uint64    _financePeriod
 
 <br/>
 
