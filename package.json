@@ -17,13 +17,6 @@
   "devDependencies": {
     "@aragon/apps-survey": "^1.0.0",
     "@aragon/test-helpers": "^2.0.0",
-    "eth-ens-namehash": "^2.0.8",
-    "eth-gas-reporter": "^0.1.1",
-    "ganache-cli": "^6.0.0",
-    "solium": "^1.0.4",
-    "truffle": "4.1.14",
-    "truffle-extract": "^1.2.1",
-    "truffle-hdwallet-provider": "0.0.3",
     "babel-eslint": "^10.0.2",
     "cross-env": "^5.2.0",
     "eslint": "^6.0.1",
@@ -36,9 +29,17 @@
     "eslint-plugin-promise": "^4.2.1",
     "eslint-plugin-react": "^7.14.2",
     "eslint-plugin-standard": "^4.0.0",
+    "eth-ens-namehash": "^2.0.8",
+    "eth-gas-reporter": "^0.1.1",
     "ethlint": "^1.2.4",
+    "ganache-cli": "^6.0.0",
+    "husky": "^3.0.9",
     "prettier": "^1.18.2",
-    "solidity-coverage": "^0.6.2"
+    "solidity-coverage": "^0.6.2",
+    "solium": "^1.0.4",
+    "truffle": "4.1.14",
+    "truffle-extract": "^1.2.1",
+    "truffle-hdwallet-provider": "0.0.3"
   },
   "scripts": {
     "prepublishOnly": "npm run compile && npm run abi:extract -- --no-compile",
