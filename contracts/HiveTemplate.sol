@@ -12,29 +12,29 @@ import { DotVoting } from "./tps/DotVoting.sol";
 
 
 contract HiveTemplate is BaseTemplate {
-    string constant private ERROR_MISSING_CACHE = "TEMPLATE_MISSING_CACHE";
+    string constant private ERROR_MISSING_CACHE =               "TEMPLATE_MISSING_CACHE";
     string constant private ERROR_MINIME_FACTORY_NOT_PROVIDED = "TEMPLATE_MINIME_FAC_NOT_PROVIDED";
-    string constant private ERROR_EMPTY_HOLDERS = "EMPTY_HOLDERS";
-    string constant private ERROR_BAD_HOLDERS_STAKES_LEN = "BAD_HOLDERS_STAKES_LEN";
-    string constant private ERROR_BAD_VOTE_SETTINGS = "BAD_VOTE_SETTINGS";
-    string constant private ERROR_BAD_MEMBER_SETTINGS = "MEMBERS_CANNOT_BE_0";
+    string constant private ERROR_EMPTY_HOLDERS =               "EMPTY_HOLDERS";
+    string constant private ERROR_BAD_HOLDERS_STAKES_LEN =      "BAD_HOLDERS_STAKES_LEN";
+    string constant private ERROR_BAD_VOTE_SETTINGS =           "BAD_VOTE_SETTINGS";
+    string constant private ERROR_BAD_MEMBER_SETTINGS =         "MEMBERS_CANNOT_BE_0";
 
 
     //TODO: change for rinkeby
-    bytes32 constant internal ADDRESS_BOOK_APP_ID = apmNamehash("address-book");              // address-book.aragonpm.eth
-    bytes32 constant internal ALLOCATIONS_APP_ID = apmNamehash("allocations");              // allocations.aragonpm.eth;
-    bytes32 constant internal DOT_VOTING_APP_ID = apmNamehash("dot-voting");            // dot-voting.aragonpm.eth;
-    bytes32 constant internal REWARDS_APP_ID = apmNamehash("rewards");              // rewards.aragonpm.eth;
+    bytes32 constant internal ADDRESS_BOOK_APP_ID = apmNamehash("address-book");      // address-book.aragonpm.eth
+    bytes32 constant internal ALLOCATIONS_APP_ID =  apmNamehash("allocations");       // allocations.aragonpm.eth;
+    bytes32 constant internal DOT_VOTING_APP_ID =   apmNamehash("dot-voting");        // dot-voting.aragonpm.eth;
+    bytes32 constant internal REWARDS_APP_ID =      apmNamehash("rewards");           // rewards.aragonpm.eth;
 
-    uint64 constant private DEFAULT_FINANCE_PERIOD = uint64(30 days);
+    uint64 constant private DEFAULT_FINANCE_PERIOD =     uint64(30 days);
     uint64 constant private DEFAULT_ALLOCATIONS_PERIOD = uint64(30 days);
 
-    bool private constant MERIT_TRANSFERABLE = true;
-    uint8 private constant MERIT_TOKEN_DECIMALS = uint8(18);
+    bool private constant MERIT_TRANSFERABLE =       true;
+    uint8 private constant MERIT_TOKEN_DECIMALS =    uint8(18);
     uint256 private constant MERIT_MAX_PER_ACCOUNT = uint256(0);
 
-    uint64 constant PCT64 = 10 ** 16;
-    address constant ANY_ENTITY = address(-1);
+    uint64 constant PCT64 =         10 ** 16;
+    address constant ANY_ENTITY =   address(-1);
 
     struct Cache {
         address dao;
@@ -52,7 +52,12 @@ contract HiveTemplate is BaseTemplate {
 
     mapping (address => Cache) private cache;
 
-    constructor(DAOFactory _daoFactory, ENS _ens, MiniMeTokenFactory _miniMeFactory, IFIFSResolvingRegistrar _aragonID)
+    constructor(
+        DAOFactory _daoFactory,
+        ENS _ens,
+        MiniMeTokenFactory _miniMeFactory,
+        IFIFSResolvingRegistrar _aragonID
+    )
         BaseTemplate(_daoFactory, _ens, _miniMeFactory, _aragonID)
         public
     {
@@ -87,9 +92,9 @@ contract HiveTemplate is BaseTemplate {
     }
 
     function setupApps(
-        string _meritTokenName,
-        string _meritTokenSymbol,
-        uint64 _allocationPeriod,
+        string    _meritTokenName,
+        string    _meritTokenSymbol,
+        uint64    _allocationPeriod,
         uint64[3] _meritVotingSettings,
         uint64[3] _dotVotingSettings
     )
@@ -245,11 +250,11 @@ contract HiveTemplate is BaseTemplate {
     }
 
     function _createAllocationsPermissions(
-        ACL _acl,
+        ACL         _acl,
         Allocations _allocations,
-        address _createAllocationsGrantee,
-        address _createAccountsGrantee,
-        address _manager
+        address     _createAllocationsGrantee,
+        address     _createAccountsGrantee,
+        address     _manager
     )
         internal
     {
@@ -268,11 +273,11 @@ contract HiveTemplate is BaseTemplate {
     }
 
     function _installDotVotingApp(
-        Kernel _dao,
+        Kernel      _dao,
         MiniMeToken _token,
-        uint64 _quorum,
-        uint64 _support,
-        uint64 _duration
+        uint64      _quorum,
+        uint64      _support,
+        uint64      _duration
     )
         internal returns (DotVoting)
     {
@@ -281,10 +286,10 @@ contract HiveTemplate is BaseTemplate {
     }
 
     function _createDotVotingPermissions(
-        ACL _acl,
+        ACL       _acl,
         DotVoting _dotVoting,
-        address _grantee,
-        address _manager
+        address   _grantee,
+        address   _manager
     )
         internal
     {
@@ -313,10 +318,10 @@ contract HiveTemplate is BaseTemplate {
     // *** MEMBER APPS ***
     function _cacheMemberApps(
         TokenManager _memberTokenManager,
-        Voting _memberVoting,
-        Vault _vault,
-        Finance _finance,
-        AddressBook _addressBook
+        Voting       _memberVoting,
+        Vault        _vault,
+        Finance      _finance,
+        AddressBook  _addressBook
     ) internal
     {
         Cache storage c = cache[msg.sender];
@@ -348,10 +353,10 @@ contract HiveTemplate is BaseTemplate {
     // *** MERIT APPS ***
     function _cacheMeritApps(
         TokenManager _meritTokenManager,
-        Voting _meritVoting,
-        Vault _allocationsVault,
-        Allocations _allocations,
-        DotVoting _dotVoting
+        Voting       _meritVoting,
+        Vault        _allocationsVault,
+        Allocations  _allocations,
+        DotVoting    _dotVoting
     ) internal
     {
         Cache storage c = cache[msg.sender];
@@ -365,10 +370,10 @@ contract HiveTemplate is BaseTemplate {
 
     function _meritAppsCache() internal returns(
         TokenManager meritTokenManager,
-        Voting meritVoting,
-        Vault allocationsVault,
-        Allocations allocations,
-        DotVoting dotVoting
+        Voting       meritVoting,
+        Vault        allocationsVault,
+        Allocations  allocations,
+        DotVoting    dotVoting
     )
     {
         Cache storage c = cache[msg.sender];
