@@ -7,10 +7,6 @@ import "./tps/Allocations.sol";
 import "./tps/Rewards.sol";
 import { DotVoting } from "./tps/DotVoting.sol";
 
-// breakout
-
-
-
 contract HiveTemplate is BaseTemplate {
     string constant private ERROR_MISSING_CACHE =               "TEMPLATE_MISSING_CACHE";
     string constant private ERROR_MINIME_FACTORY_NOT_PROVIDED = "TEMPLATE_MINIME_FAC_NOT_PROVIDED";
@@ -53,9 +49,9 @@ contract HiveTemplate is BaseTemplate {
     mapping (address => Cache) private cache;
 
     constructor(
-        DAOFactory _daoFactory,
-        ENS _ens,
-        MiniMeTokenFactory _miniMeFactory,
+        DAOFactory              _daoFactory,
+        ENS                     _ens,
+        MiniMeTokenFactory      _miniMeFactory,
         IFIFSResolvingRegistrar _aragonID
     )
         BaseTemplate(_daoFactory, _ens, _miniMeFactory, _aragonID)
