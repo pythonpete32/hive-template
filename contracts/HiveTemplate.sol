@@ -82,7 +82,7 @@ contract HiveTemplate is BaseTemplate {
         // install member apps
         TokenManager memberTokenManager = _installMemberApps(dao, memberToken, _memberVotingSettings, _financePeriod);
         // mint member tokens
-        _mintTokens(acl, memberTokenManager, _members, 1);
+        // _mintTokens(acl, memberTokenManager, _members, 1);
         // cache DAO
         _cacheDao(dao);
     }
@@ -141,16 +141,16 @@ contract HiveTemplate is BaseTemplate {
     {
         TokenManager memberTokenManager = _installTokenManagerApp(_dao, _token, false, uint256(1));
         Voting voting = _installVotingApp(_dao, _token, _votingSettings);
-        Vault mainVault = _installVaultApp(_dao);
-        Finance finance = _installFinanceApp(_dao, mainVault, _financePeriod == 0 ? DEFAULT_FINANCE_PERIOD : _financePeriod);
-        AddressBook addressBook = _installAddressBookApp(_dao);
+        //Vault mainVault = _installVaultApp(_dao);
+        //Finance finance = _installFinanceApp(_dao, mainVault, _financePeriod == 0 ? DEFAULT_FINANCE_PERIOD : _financePeriod);
+        //AddressBook addressBook = _installAddressBookApp(_dao);
 
-        _cacheMemberApps(memberTokenManager, voting, mainVault, finance, addressBook);
+        //_cacheMemberApps(memberTokenManager, voting, mainVault, finance, addressBook);
 
         return memberTokenManager;
     }
 
-    // TODO: add Rrojects
+    // TODO: add Projects
     function _installMeritApps(
         Kernel           _dao,
         MiniMeToken      _token,
