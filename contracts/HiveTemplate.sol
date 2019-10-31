@@ -17,7 +17,7 @@ contract HiveTemplate is BaseTemplate {
 
 
     //TODO: change for rinkeby
-    bytes32 constant internal ADDRESS_BOOK_APP_ID = apmNamehash("address-book");      // address-book.aragonpm.eth
+    bytes32 constant internal ADDRESS_BOOK_APP_ID = apmNamehash("address-book");      // address-book.aragonpm.eth address-book
     bytes32 constant internal ALLOCATIONS_APP_ID =  apmNamehash("allocations");       // allocations.aragonpm.eth;
     bytes32 constant internal DOT_VOTING_APP_ID =   apmNamehash("dot-voting");        // dot-voting.aragonpm.eth;
     bytes32 constant internal REWARDS_APP_ID =      apmNamehash("rewards");           // rewards.aragonpm.eth;
@@ -63,6 +63,17 @@ contract HiveTemplate is BaseTemplate {
 
     // ------------------------------------- EXTERNAL FUNCTIONS ------------------------------------- //
 
+    function newTokenAndDao(
+        address[] _members,
+        uint64[3] _memberVotingSettings
+    )
+    external
+    {
+        prepareInstance("BeeToken", "BEE", _members, _memberVotingSettings, 0);
+        setupApps("HoneyToken", "HONEY", 0, _memberVotingSettings, _memberVotingSettings);
+        //finalizeInstance("TheHive");
+    }
+
     function prepareInstance(
         string    _memberTokenName,
         string    _memberTokenSymbol,
@@ -70,7 +81,7 @@ contract HiveTemplate is BaseTemplate {
         uint64[3] _memberVotingSettings,
         uint64    _financePeriod
     )
-        external
+        public
     {
         _ensureHoldersNotZero(_members);
         _ensureVotingSettings(_memberVotingSettings);
@@ -82,7 +93,7 @@ contract HiveTemplate is BaseTemplate {
         // install member apps
         TokenManager memberTokenManager = _installMemberApps(dao, memberToken, _memberVotingSettings, _financePeriod);
         // mint member tokens
-        // _mintTokens(acl, memberTokenManager, _members, 1);
+        _mintTokens(acl, memberTokenManager, _members, 1);
         // cache DAO
         _cacheDao(dao);
     }
@@ -94,7 +105,7 @@ contract HiveTemplate is BaseTemplate {
         uint64[3] _meritVotingSettings,
         uint64[3] _dotVotingSettings
     )
-        external
+        public
     {
         _ensureVotingSettings(_meritVotingSettings, _dotVotingSettings);
         _ensureMemberAppsCache();
@@ -105,11 +116,11 @@ contract HiveTemplate is BaseTemplate {
         // install Merit apps
         _installMeritApps(dao, meritToken, _allocationPeriod, _meritVotingSettings, _dotVotingSettings);
 
-        _setupMemberPermissions(dao);
+        //_setupMemberPermissions(dao);
     }
 
     // TODO: probably dont need to make this a separate tx, will fit into the stack limit but not sure about gas
-    function finalizeInstance(string _id) external {
+    function finalizeInstance(string _id) public {
 
         _ensureMeritAppsCache();
 
@@ -141,16 +152,17 @@ contract HiveTemplate is BaseTemplate {
     {
         TokenManager memberTokenManager = _installTokenManagerApp(_dao, _token, false, uint256(1));
         Voting voting = _installVotingApp(_dao, _token, _votingSettings);
-        //Vault mainVault = _installVaultApp(_dao);
-        //Finance finance = _installFinanceApp(_dao, mainVault, _financePeriod == 0 ? DEFAULT_FINANCE_PERIOD : _financePeriod);
-        //AddressBook addressBook = _installAddressBookApp(_dao);
+        Vault mainVault = _installVaultApp(_dao);
+        Finance finance = _installFinanceApp(_dao, mainVault, _financePeriod == 0 ? DEFAULT_FINANCE_PERIOD : _financePeriod);
+        AddressBook addressBook = _installAddressBookApp(_dao);
 
-        //_cacheMemberApps(memberTokenManager, voting, mainVault, finance, addressBook);
+        _cacheMemberApps(memberTokenManager, voting, mainVault, finance, addressBook);
 
         return memberTokenManager;
     }
 
     // TODO: add Projects
+    
     function _installMeritApps(
         Kernel           _dao,
         MiniMeToken      _token,
@@ -166,9 +178,9 @@ contract HiveTemplate is BaseTemplate {
         Voting meritVoting = _installVotingApp(_dao, _token, _votingSettings);
         Vault allocationsVault = _installVaultApp(_dao);
         Allocations allocations = _installAllocationsApp(_dao, allocationsVault, _period == 0 ? DEFAULT_ALLOCATIONS_PERIOD : _period);
-        DotVoting dotVoting = _installDotVotingApp(_dao, _token, _dotVotingSettings);
+        //DotVoting dotVoting = _installDotVotingApp(_dao, _token, _dotVotingSettings);
 
-        _cacheMeritApps(meritTokenManager, meritVoting, allocationsVault, allocations, dotVoting);
+        //_cacheMeritApps(meritTokenManager, meritVoting, allocationsVault, allocations, dotVoting);
 
     }
 
