@@ -1,11 +1,16 @@
+/*
+ * SPDX-License-Identitifer: GPL-3.0-or-later
+ */
+
 pragma solidity ^0.4.24;
 
 import "@aragon/os/contracts/apps/AragonApp.sol";
-import "@aragon/os/contracts/lib/math/SafeMath.sol";
-import "@aragon/os/contracts/lib/math/SafeMath64.sol";
-import "@aragon/apps-vault/contracts/Vault.sol";
 
-import "./AddressBook.sol";
+import "@aragon/os/contracts/lib/math/SafeMath.sol";
+
+import "@aragon/os/contracts/lib/math/SafeMath64.sol";
+
+import "@aragon/apps-vault/contracts/Vault.sol";
 
 
 contract Allocations is AragonApp {
@@ -42,7 +47,7 @@ contract Allocations is AragonApp {
         uint64 recurrences;
         uint64 period;
         address[] candidateAddresses;
-        uint256[] support;
+        uint256[] supports;
         uint64[] executions;
         uint256 amount;
         string description;
@@ -194,7 +199,7 @@ contract Allocations is AragonApp {
     returns(uint256 numCandidates)
     {
         Payout storage payout = accounts[_accountId].payouts[_payoutId];
-        numCandidates = payout.support.length;
+        numCandidates = payout.supports.length;
     }
 
     /** @notice Basic getter for Allocation value for a specific recipient.
@@ -207,11 +212,11 @@ contract Allocations is AragonApp {
     view
     isInitialized
     payoutExists(_accountId, _payoutId)
-    returns(uint256 support, address candidateAddress, uint64 executions)
+    returns(uint256 supports, address candidateAddress, uint64 executions)
     {
         Payout storage payout = accounts[_accountId].payouts[_payoutId];
-        require(_idx < payout.support.length, ERROR_NO_CANDIDATE);
-        support = payout.support[_idx];
+        require(_idx < payout.supports.length, ERROR_NO_CANDIDATE);
+        supports = payout.supports[_idx];
         candidateAddress = payout.candidateAddresses[_idx];
         executions = payout.executions[_idx];
     }
@@ -406,7 +411,7 @@ contract Allocations is AragonApp {
     *      the DotVote. This function is public for stack-depth reasons
     * @notice Create an allocation from budget #`_accountId` for "`_description`" `(_recurrences > 1) ? 'that will execute ' + _recurrences + ' times': ''`.
     * @param _candidateAddresses Array of potential addresses receiving a share of the allocation.
-    * @param _support The Array of all support values for the various candidates. These values are set in dot voting.
+    * @param _supports The Array of all support values for the various candidates. These values are set in dot voting.
     * @param _description The distribution description
     * @param _accountId The Id of the budget used for the allocation
     * @param _recurrences Quantity used to indicate whether this is a recurring or one-time payout
@@ -415,7 +420,7 @@ contract Allocations is AragonApp {
     */
     function setDistribution(
         address[] _candidateAddresses,
-        uint256[] _support,
+        uint256[] _supports,
         uint256[] /*unused_infoIndices*/,
         string /*unused_candidateInfo*/,
         string _description,
@@ -444,9 +449,9 @@ contract Allocations is AragonApp {
             require(payout.period >= 1 days, ERROR_PERIOD_SHORT);
         }
         payout.startTime = _startTime; // solium-disable-line security/no-block-members
-        payout.support = _support;
+        payout.supports = _supports;
         payout.description = _description;
-        payout.executions.length = _support.length;
+        payout.executions.length = _supports.length;
         payoutId = account.payoutsLength - 1;
         emit SetDistribution(_accountId, payoutId);
         if (_startTime <= getTimestamp64()) {
@@ -464,12 +469,12 @@ contract Allocations is AragonApp {
     {
         Account storage account = accounts[_accountId];
         Payout storage payout = account.payouts[_payoutId];
-        require(_candidateId < payout.support.length, ERROR_NO_CANDIDATE);
+        require(_candidateId < payout.supports.length, ERROR_NO_CANDIDATE); 
 
         uint256 paid = _paid;
         uint256 totalSupport = _getTotalSupport(payout);
 
-        uint256 individualPayout = payout.support[_candidateId].mul(payout.amount).div(totalSupport);
+        uint256 individualPayout = payout.supports[_candidateId].mul(payout.amount).div(totalSupport);
         if (individualPayout == 0) {
             return;
         }
@@ -560,13 +565,13 @@ contract Allocations is AragonApp {
 
     function _runPayout(uint64 _accountId, uint64 _payoutId) internal returns(bool success) {
         Account storage account = accounts[_accountId];
-        uint256[] storage support = account.payouts[_payoutId].support;
+        uint256[] storage supports = account.payouts[_payoutId].supports;
         uint64 i;
         uint256 paid = 0;
         uint256 length = account.payouts[_payoutId].candidateAddresses.length;
         //handle vault
         for (i = 0; i < length; i++) {
-            if (support[i] != 0 && _nextPaymentTime(_accountId, _payoutId, i) <= getTimestamp64()) {
+            if (supports[i] != 0 && _nextPaymentTime(_accountId, _payoutId, i) <= getTimestamp64()) {
                 paid = _executePayoutAtLeastOnce(_accountId, _payoutId, i, paid);
             } else {
                 emit PaymentFailure(_accountId, _payoutId, i);
@@ -576,8 +581,8 @@ contract Allocations is AragonApp {
     }
 
     function _getTotalSupport(Payout storage payout) internal view returns (uint256 totalSupport) {
-        for (uint256 i = 0; i < payout.support.length; i++) {
-            totalSupport += payout.support[i];
+        for (uint256 i = 0; i < payout.supports.length; i++) {
+            totalSupport += payout.supports[i];
         }
     }
 
@@ -604,7 +609,7 @@ contract Allocations is AragonApp {
     {
         Account storage account = accounts[_accountId];
         Payout storage payout = account.payouts[_payoutId];
-        uint256 individualPayout = payout.support[_candidateIndex].mul(payout.amount).div(_totalSupport);
+        uint256 individualPayout = payout.supports[_candidateIndex].mul(payout.amount).div(_totalSupport);
         require(_canMakePayment(_accountId, individualPayout), ERROR_INSUFFICIENT_FUNDS);
 
         address token = account.token;
