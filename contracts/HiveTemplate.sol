@@ -126,18 +126,18 @@ contract HiveTemplate is BaseTemplate {
 
         Kernel dao = _daoCache();
         ACL acl = ACL(dao.acl());
-        //(,Voting memberVoting, , ,) = _memberAppsCache();
+        (,Voting memberVoting, , ,) = _memberAppsCache();
 
          //setup merit apps permissions
-        //_setupMeritPermissions(dao);
+        _setupMeritPermissions(dao);
          //setup EVM script registry permissions
-        //_createEvmScriptsRegistryPermissions(acl, memberVoting, memberVoting);
+        _createEvmScriptsRegistryPermissions(acl, memberVoting, memberVoting);
          //clear DAO permissions
-        //_transferRootPermissionsFromTemplateAndFinalizeDAO(dao, memberVoting, memberVoting);
+        _transferRootPermissionsFromTemplateAndFinalizeDAO(dao, memberVoting, memberVoting);
         // register id
-        //_registerID(_id, address(dao));
+        _registerID(_id, dao);
         // clear cache
-        //_clearCache();
+        _clearCache();
     }
 
     // ------------------------------------- INTERNAL FUNCTIONS ------------------------------------- //
@@ -400,6 +400,7 @@ contract HiveTemplate is BaseTemplate {
     }
 
     // *** CLEAR CACHE ***
+    // TODO: add allocations
     function _clearCache() internal {
         Cache storage c = cache[msg.sender];
 
@@ -411,7 +412,7 @@ contract HiveTemplate is BaseTemplate {
         delete c.addressBook;
         delete c.vault;
         delete c.allocationsVault;
-        delete c.allocations;
+        //delete c.allocations;
         delete c.dotVoting;
         delete c.finance;
     }

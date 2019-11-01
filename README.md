@@ -34,6 +34,10 @@ this can be run using AragonCli with the following command :
 dao new --template hive-template-staging.open.aragonpm.eth --fn prepareInstance --fn-args "BeeToken" BEE ['"0x75B98710D5995AB9992F02492B7568b43133161D"']  ['"500000000000000000","50000000000000000","604800"'] 0
 ```
 
+test 
+```
+dao new --template hive-template-staging.open.aragonpm.eth --fn newTokenAndDao --fn-args ['"0x75B98710D5995AB9992F02492B7568b43133161D"']  ['"500000000000000000","50000000000000000","604800"']
+```
 <br/>
 
 ### Finalize DAO:
