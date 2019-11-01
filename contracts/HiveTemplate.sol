@@ -71,7 +71,7 @@ contract HiveTemplate is BaseTemplate {
     {
         prepareInstance("BeeToken", "BEE", _members, _memberVotingSettings, 0);
         setupApps("HoneyToken", "HONEY", 0, _memberVotingSettings, _memberVotingSettings);
-        //finalizeInstance("TheHive");
+        finalizeInstance("TheHive");
     }
 
     function prepareInstance(
@@ -116,7 +116,7 @@ contract HiveTemplate is BaseTemplate {
         // install Merit apps
         _installMeritApps(dao, meritToken, _allocationPeriod, _meritVotingSettings, _dotVotingSettings);
 
-        //_setupMemberPermissions(dao);
+        _setupMemberPermissions(dao);
     }
 
     // TODO: probably dont need to make this a separate tx, will fit into the stack limit but not sure about gas
@@ -126,18 +126,18 @@ contract HiveTemplate is BaseTemplate {
 
         Kernel dao = _daoCache();
         ACL acl = ACL(dao.acl());
-        (,Voting memberVoting, , ,) = _memberAppsCache();
+        //(,Voting memberVoting, , ,) = _memberAppsCache();
 
-        // setup merit apps permissions
-        _setupMeritPermissions(dao);
-        // setup EVM script registry permissions
-        _createEvmScriptsRegistryPermissions(acl, memberVoting, memberVoting);
-        // clear DAO permissions
-        _transferRootPermissionsFromTemplateAndFinalizeDAO(dao, memberVoting, memberVoting);
+         //setup merit apps permissions
+        //_setupMeritPermissions(dao);
+         //setup EVM script registry permissions
+        //_createEvmScriptsRegistryPermissions(acl, memberVoting, memberVoting);
+         //clear DAO permissions
+        //_transferRootPermissionsFromTemplateAndFinalizeDAO(dao, memberVoting, memberVoting);
         // register id
-        _registerID(_id, address(dao));
+        //_registerID(_id, address(dao));
         // clear cache
-        _clearCache();
+        //_clearCache();
     }
 
     // ------------------------------------- INTERNAL FUNCTIONS ------------------------------------- //
@@ -162,7 +162,8 @@ contract HiveTemplate is BaseTemplate {
     }
 
     // TODO: add Projects
-    
+
+    // TODO: Add Allocations back in
     function _installMeritApps(
         Kernel           _dao,
         MiniMeToken      _token,
@@ -177,10 +178,13 @@ contract HiveTemplate is BaseTemplate {
         TokenManager meritTokenManager = _installTokenManagerApp(_dao, _token, true, uint256(18));
         Voting meritVoting = _installVotingApp(_dao, _token, _votingSettings);
         Vault allocationsVault = _installVaultApp(_dao);
-        Allocations allocations = _installAllocationsApp(_dao, allocationsVault, _period == 0 ? DEFAULT_ALLOCATIONS_PERIOD : _period);
-        //DotVoting dotVoting = _installDotVotingApp(_dao, _token, _dotVotingSettings);
 
-        //_cacheMeritApps(meritTokenManager, meritVoting, allocationsVault, allocations, dotVoting);
+
+        //Allocations allocations = _installAllocationsApp(_dao, allocationsVault, _period == 0 ? DEFAULT_ALLOCATIONS_PERIOD : _period);
+        DotVoting dotVoting = _installDotVotingApp(_dao, _token, _dotVotingSettings);
+
+        // TODO: add allocations back in
+        _cacheMeritApps(meritTokenManager, meritVoting, allocationsVault, dotVoting);
 
     }
 
@@ -188,7 +192,8 @@ contract HiveTemplate is BaseTemplate {
     // #  Setup Permissions #
     // ######################
 
-    // TODO: none of these permissions are correct as per the canonical 1Hive DAO
+
+        // TODO: none of these permissions are correct as per the canonical 1Hive DAO
     function _setupMemberPermissions(Kernel _dao) internal {
         ACL acl = ACL(_dao.acl());
 
@@ -212,13 +217,14 @@ contract HiveTemplate is BaseTemplate {
     }
 
     // TODO: none of these permissions are correct as per the canonical 1Hive DAO
+    // TODO: add allocations back in
     function _setupMeritPermissions(Kernel _dao) internal {
         ACL acl = ACL(_dao.acl());
 
+        
         (TokenManager meritTokenManager,
         Voting        meritVoting,
         Vault         allocationsVault,
-        Allocations   allocations,
         DotVoting     dotVoting) = _meritAppsCache();
 
         (,Voting memberVoting, , , ) = _memberAppsCache();
@@ -230,7 +236,7 @@ contract HiveTemplate is BaseTemplate {
         // vault
         //_createVaultPermissions(_acl, _vault, _grantee, _manager);
         // allocations
-        _createAllocationsPermissions(acl, allocations, dotVoting, memberVoting, memberVoting);
+        // _createAllocationsPermissions(acl, allocations, dotVoting, memberVoting, memberVoting);
         // dot voting
         _createDotVotingPermissions(acl, dotVoting, memberVoting, memberVoting);
     }
@@ -359,11 +365,11 @@ contract HiveTemplate is BaseTemplate {
     }
 
     // *** MERIT APPS ***
+    // TODO: add allocations back in 
     function _cacheMeritApps(
         TokenManager _meritTokenManager,
         Voting       _meritVoting,
         Vault        _allocationsVault,
-        Allocations  _allocations,
         DotVoting    _dotVoting
     ) internal
     {
@@ -372,15 +378,15 @@ contract HiveTemplate is BaseTemplate {
         c.mrtTokenManager = address(_meritTokenManager);
         c.mrtVoting = address(_meritVoting);
         c.allocationsVault = address(_allocationsVault);
-        c.allocations = address(_allocations);
+        // c.allocations = address(_allocations);
         c.dotVoting = address(_dotVoting);
     }
 
+    // TODO: add allocations back in
     function _meritAppsCache() internal returns(
         TokenManager meritTokenManager,
         Voting       meritVoting,
         Vault        allocationsVault,
-        Allocations  allocations,
         DotVoting    dotVoting
     )
     {
@@ -389,7 +395,7 @@ contract HiveTemplate is BaseTemplate {
         meritTokenManager = TokenManager(c.mrtTokenManager);
         meritVoting = Voting(c.mrtVoting);
         allocationsVault = Vault(c.allocationsVault);
-        allocations = Allocations(c.allocations);
+        // allocations = Allocations(c.allocations);
         dotVoting = DotVoting(c.dotVoting);
     }
 
@@ -446,13 +452,14 @@ contract HiveTemplate is BaseTemplate {
         );
     }
 
+    // TODO: add allocations
     function _ensureMeritAppsCache() private view {
         Cache storage c = cache[msg.sender];
         require(
             c.mrtTokenManager != address(0) &&
             c.mrtVoting != address(0) &&
             c.allocationsVault != address(0) &&
-            c.allocations != address(0) &&
+            //c.allocations != address(0) &&
             c.dotVoting != address(0),
 
             ERROR_MISSING_CACHE
