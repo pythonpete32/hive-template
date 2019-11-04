@@ -131,7 +131,7 @@ contract HiveTemplate is BaseTemplate {
         _transferRootPermissionsFromTemplateAndFinalizeDAO(dao, memberVoting, memberVoting);
 
         // register id
-        //_registerID(_id, dao);
+        //_registerID(_id, address(dao));
         _clearCache();
     }
 
