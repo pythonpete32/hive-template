@@ -11,14 +11,13 @@ const { getENS, getTemplateAddress } = require('@aragon/templates-shared/lib/ens
 const { getInstalledAppsById } = require('@aragon/templates-shared/helpers/events')(artifacts)
 const { assertRole, assertMissingRole, assertRoleNotGranted } = require('@aragon/templates-shared/helpers/assertRole')(web3)
 
-const CompanyTemplate = artifacts.require('HiveTemplate')
+const HiveTemplate = artifacts.require('HiveTemplate')
 
 const ACL = artifacts.require('ACL')
 const Kernel = artifacts.require('Kernel')
 const Agent = artifacts.require('Agent')
 const Vault = artifacts.require('Vault')
 const Voting = artifacts.require('Voting')
-const HiveTemplate = artifacts.require('HiveTemplate')
 const Finance = artifacts.require('Finance')
 const TokenManager = artifacts.require('TokenManager')
 const MiniMeToken = artifacts.require('MiniMeToken')
