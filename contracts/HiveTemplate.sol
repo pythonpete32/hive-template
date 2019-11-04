@@ -70,8 +70,7 @@ contract HiveTemplate is BaseTemplate {
     external
     {
         prepareInstance("BeeToken", "BEE", _members, _memberVotingSettings, 0);
-        setupApps("HoneyToken", "HONEY", 0, _memberVotingSettings, _memberVotingSettings);
-        finalizeInstance("TheHive");
+        finaliseDao("HoneyToken", "HONEY", 0, _memberVotingSettings, _memberVotingSettings, "TheHive");
     }
 
     function prepareInstance(
@@ -98,38 +97,34 @@ contract HiveTemplate is BaseTemplate {
         _cacheDao(dao);
     }
 
-    function setupApps(
+    function finaliseDao(
         string    _meritTokenName,
         string    _meritTokenSymbol,
         uint64    _allocationPeriod,
         uint64[3] _meritVotingSettings,
-        uint64[3] _dotVotingSettings
+        uint64[3] _dotVotingSettings,
+        string    _id
     )
         public
     {
         _ensureVotingSettings(_meritVotingSettings, _dotVotingSettings);
         _ensureMemberAppsCache();
 
+
         Kernel dao = _daoCache();
+        ACL acl = ACL(dao.acl());
+        (,Voting memberVoting, , ,) = _memberAppsCache();
+
         // deploy Merit token
         MiniMeToken meritToken = _createToken(_meritTokenName, _meritTokenSymbol, MERIT_TOKEN_DECIMALS);
         // install Merit apps
         _installMeritApps(dao, meritToken, _allocationPeriod, _meritVotingSettings, _dotVotingSettings);
 
         _setupMemberPermissions(dao);
-    }
 
-    // TODO: probably dont need to make this a separate tx, will fit into the stack limit but not sure about gas
-    function finalizeInstance(string _id) public {
-
-        _ensureMeritAppsCache();
-
-        Kernel dao = _daoCache();
-        ACL acl = ACL(dao.acl());
-        (,Voting memberVoting, , ,) = _memberAppsCache();
-
-         //setup merit apps permissions
+        //setup merit apps permissions
         _setupMeritPermissions(dao);
+
          //setup EVM script registry permissions
         _createEvmScriptsRegistryPermissions(acl, memberVoting, memberVoting);
          //clear DAO permissions
