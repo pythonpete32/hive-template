@@ -2,9 +2,9 @@ pragma solidity 0.4.24;
 
 import "@aragon/apps-shared-minime/contracts/MiniMeToken.sol";
 import "@aragon/templates-shared/contracts/BaseTemplate.sol";
+
 import "./tps/AddressBook.sol";
 import "./tps/Allocations.sol";
-import "./tps/Rewards.sol";
 import { DotVoting } from "./tps/DotVoting.sol";
 
 contract HiveTemplate is BaseTemplate {
@@ -47,6 +47,7 @@ contract HiveTemplate is BaseTemplate {
     }
 
     mapping (address => Cache) private cache;
+    // Bounties internal bountiesRegistry;
 
     constructor(
         DAOFactory              _daoFactory,
