@@ -63,7 +63,7 @@ contract HiveTemplate is BaseTemplate {
 
     // ------------------------------------- EXTERNAL FUNCTIONS ------------------------------------- //
 
-    function newTokenAndDao(
+    function testTemplate(
         address[] _members,
         uint64[3] _memberVotingSettings
     )
@@ -85,14 +85,16 @@ contract HiveTemplate is BaseTemplate {
         _ensureHoldersNotZero(_members);
         _ensureVotingSettings(_memberVotingSettings);
 
-        // deploy DAO
+
         (Kernel dao, ACL acl) = _createDAO();
-        // deploy member token
         MiniMeToken memberToken = _createToken(_memberTokenName, _memberTokenSymbol, uint8(0));
+
         // install member apps
         TokenManager memberTokenManager = _installMemberApps(dao, memberToken, _memberVotingSettings, _financePeriod);
+
         // mint member tokens
         _mintTokens(acl, memberTokenManager, _members, 1);
+
         // cache DAO
         _cacheDao(dao);
     }
@@ -113,25 +115,23 @@ contract HiveTemplate is BaseTemplate {
 
         Kernel dao = _daoCache();
         ACL acl = ACL(dao.acl());
-        (,Voting memberVoting, , ,) = _memberAppsCache();
+        Voting memberVoting = _memberVotingCache();
 
-        // deploy Merit token
+
         MiniMeToken meritToken = _createToken(_meritTokenName, _meritTokenSymbol, MERIT_TOKEN_DECIMALS);
         // install Merit apps
         _installMeritApps(dao, meritToken, _allocationPeriod, _meritVotingSettings, _dotVotingSettings);
 
         _setupMemberPermissions(dao);
-
-        //setup merit apps permissions
         _setupMeritPermissions(dao);
 
          //setup EVM script registry permissions
         _createEvmScriptsRegistryPermissions(acl, memberVoting, memberVoting);
          //clear DAO permissions
         _transferRootPermissionsFromTemplateAndFinalizeDAO(dao, memberVoting, memberVoting);
+
         // register id
         //_registerID(_id, dao);
-        // clear cache
         _clearCache();
     }
 
@@ -140,7 +140,6 @@ contract HiveTemplate is BaseTemplate {
     // ######################
     // #     Setup Steps    #
     // ######################
-
     function _installMemberApps(Kernel _dao, MiniMeToken _token, uint64[3] _votingSettings, uint64 _financePeriod)
         internal
         returns (TokenManager)
@@ -359,8 +358,13 @@ contract HiveTemplate is BaseTemplate {
         addressBook = AddressBook(c.addressBook);
     }
 
+    function _memberVotingCache() internal returns (Voting memberVoting) {
+        Cache storage c = cache[msg.sender];
+        memberVoting = Voting(c.mbrVoting);
+    }
+
     // *** MERIT APPS ***
-    // TODO: add allocations back in 
+    // TODO: add allocations back in
     function _cacheMeritApps(
         TokenManager _meritTokenManager,
         Voting       _meritVoting,

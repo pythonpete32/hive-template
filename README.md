@@ -3,41 +3,48 @@
 
 The 1Hive Template is intended to allow organisations to simply deploy a DAO with the same structure and permissions as the 1Hive DAO
 
-## Publish
-You can publish the template to the devchain with
+
+## Development
+#### Deploy Template To devchain
+clone this repo with 
+``` 
+https://github.com/pythonpete32/hive-template.git
+``` 
+and install the deps with 
+```
+npm i
+```
+open three terminal windows, in the first start the devchain with
+```
+aragon devchain --verbose
+```
+in the second start IPFS with
+```
+aragon ipfs
+```
+and in the third you will deploy the template to your local APM on the devchain with 
+```
+npm run publish:aragen
+```
+#### launch template instance
+once the template is on your local APM you can create a instance with
 
 ```
-publish:major:devchain
+dao new --template hive-template-staging.open.aragonpm.eth --fn testTemplate --fn-args ['"0x75B98710D5995AB9992F02492B7568b43133161D"']  ['"500000000000000000","50000000000000000","604800"']
 ```
 
-## Usage
+#### Interact with the DAO
 
-creating a 1Hive DAO requires calling two functions. each creates a transaction
-
-### Prepare an incomplete DAO:
-
-```sh
-    function prepareInstance(
-        string    _memberTokenName,
-        string    _memberTokenSymbol,
-        address[] _members,
-        uint64[3] _memberVotingSettings,
-        uint64    _financePeriod
-    )
+you can interact with the DAO using the CLI, if you want to see the results in the client you have to intstall the client localy
 ```
-
-<br/>
-
-this can be run using AragonCli with the following command :
-
-```sh
-dao new --template hive-template-staging.open.aragonpm.eth --fn prepareInstance --fn-args "BeeToken" BEE ['"0x75B98710D5995AB9992F02492B7568b43133161D"']  ['"500000000000000000","50000000000000000","604800"'] 0
+git clone https://github.com/aragon/aragon.git
 ```
+then install with 
 
-test 
 ```
-dao new --template hive-template-staging.open.aragonpm.eth --fn newTokenAndDao --fn-args ['"0x75B98710D5995AB9992F02492B7568b43133161D"']  ['"500000000000000000","50000000000000000","604800"']
+npm i
 ```
-<br/>
-
-### Finalize DAO:
+you can then run the client with 
+```
+npm run start:local
+```
