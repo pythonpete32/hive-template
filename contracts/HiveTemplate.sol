@@ -1,11 +1,12 @@
 pragma solidity 0.4.24;
 
-import "@aragon/apps-shared-minime/contracts/MiniMeToken.sol";
 import "@aragon/templates-shared/contracts/BaseTemplate.sol";
 
 import "./tps/AddressBook.sol";
 import "./tps/Allocations.sol";
+import "./tps/Projects.sol";
 import { DotVoting } from "./tps/DotVoting.sol";
+
 
 contract HiveTemplate is BaseTemplate {
     string constant private ERROR_MISSING_CACHE =               "TEMPLATE_MISSING_CACHE";
@@ -20,7 +21,9 @@ contract HiveTemplate is BaseTemplate {
     bytes32 constant internal ADDRESS_BOOK_APP_ID = apmNamehash("address-book");      // address-book.aragonpm.eth address-book
     bytes32 constant internal ALLOCATIONS_APP_ID =  apmNamehash("allocations");       // allocations.aragonpm.eth;
     bytes32 constant internal DOT_VOTING_APP_ID =   apmNamehash("dot-voting");        // dot-voting.aragonpm.eth;
+    bytes32 constant internal PROJECTS_APP_ID =     apmNamehash("Projects");          // rewards.aragonpm.eth;
     bytes32 constant internal REWARDS_APP_ID =      apmNamehash("rewards");           // rewards.aragonpm.eth;
+
 
     uint64 constant private DEFAULT_FINANCE_PERIOD =     uint64(30 days);
     uint64 constant private DEFAULT_ALLOCATIONS_PERIOD = uint64(30 days);
@@ -47,19 +50,21 @@ contract HiveTemplate is BaseTemplate {
     }
 
     mapping (address => Cache) private cache;
-    // Bounties internal bountiesRegistry;
+    Bounties internal bountiesRegistry;
 
     constructor(
         DAOFactory              _daoFactory,
         ENS                     _ens,
         MiniMeTokenFactory      _miniMeFactory,
-        IFIFSResolvingRegistrar _aragonID
+        IFIFSResolvingRegistrar _aragonID,
+        address                 _bounties
     )
         BaseTemplate(_daoFactory, _ens, _miniMeFactory, _aragonID)
         public
     {
         _ensureAragonIdIsValid(_aragonID);
         _ensureMiniMeFactoryIsValid(_miniMeFactory);
+        bountiesRegistry = Bounties(_bounties); // check that the constructor is actually passing an address and not the instance
     }
 
     // ------------------------------------- EXTERNAL FUNCTIONS ------------------------------------- //
