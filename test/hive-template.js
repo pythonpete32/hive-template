@@ -58,7 +58,7 @@ contract('Hive Dao Template', ([_, owner, mbrHolder1, mbrHolder2, mrtHolder1, mr
     const DOT_MIN_ACCEPTANCE_QUORUM = 5e16
     const DOT_VOTING_SETTINGS = [DOT_SUPPORT_REQUIRED, DOT_MIN_ACCEPTANCE_QUORUM, DOT_VOTE_DURATION]
 
-    FINANCE_PERIOD = 60 * 60 * 24 * 15 // 15 days
+    const FINANCE_PERIOD = 60 * 60 * 24 * 15 // 15 days
 
     before('fetch hive template and ENS', async () => {
         ens = await getENS()
